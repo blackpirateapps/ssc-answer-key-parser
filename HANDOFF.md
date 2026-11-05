@@ -27,6 +27,7 @@ It is engineered to handle massive concurrent traffic spikes (10k+ users) during
 | **High-Concurrency Caching** | ✅ Complete | In-memory LRU cache + Single-Flight request deduplication + Pluggable Upstash Redis. |
 | **Hacker News UI** | ✅ Complete | Responsive, beige `#f6f6ef` & orange `#ff6600` theme, zero heavy component libraries. |
 | **Question Review Filter** | ✅ Complete | Filterable list: All (100), Wrong (19), Left (17), Correct (64). |
+| **Question & Options View** | ✅ Complete | Full question image and 4 option images displayed with chosen/correct badges and view mode toggle. |
 | **Shareable URL Query** | ✅ Complete | `/?url=...` allows instant sharing and bookmarking. |
 | **Vercel Mumbai (`bom1`) Routing** | ✅ Complete | Configured in `vercel.json` to prevent Cloudflare 403 Geo-blocking on foreign IPs. |
 | **Residential Proxy Support** | ✅ Complete | Built-in `undici.ProxyAgent` support via `PROXY_URL` environment variable. |

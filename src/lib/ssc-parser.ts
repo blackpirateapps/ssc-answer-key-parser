@@ -140,7 +140,7 @@ export async function parseSscAnswerKey(rawUrl: string): Promise<ScoreCardRespon
     const secQuestions: QuestionDetail[] = [];
 
     for (let qNum = secConfig.start; qNum <= secConfig.end; qNum++) {
-      const qDetail = parseQuestion($sec, qNum, secConfig.id, secConfig.name);
+      const qDetail = parseQuestion($sec, qNum, secConfig.id, secConfig.name, cleanUrl);
       secQuestions.push(qDetail);
       allQuestions.push(qDetail);
     }
@@ -282,11 +282,21 @@ function parseCandidateDetails($: cheerio.CheerioAPI): CandidateInfo {
   };
 }
 
+function toAbsoluteUrl(src: string | undefined | null, base: string): string | null {
+  if (!src) return null;
+  try {
+    return new URL(src, base).href;
+  } catch {
+    return src;
+  }
+}
+
 function parseQuestion(
   $: cheerio.CheerioAPI,
   qNum: number,
   sectionId: string,
-  sectionName: string
+  sectionName: string,
+  baseUrl: string
 ): QuestionDetail {
   // Find the exact font element containing Q.No: {qNum}
   const qFont = $("font").filter((_, el) => {
@@ -303,6 +313,8 @@ function parseQuestion(
       status: "unattempted",
       chosenOption: null,
       correctOption: null,
+      questionImgUrl: null,
+      options: [],
     };
   }
 
@@ -314,6 +326,14 @@ function parseQuestion(
       qRowIdx = i;
       break;
     }
+  }
+
+  // Question row image
+  let questionImgUrl: string | null = null;
+  if (qRowIdx >= 0) {
+    const qRow = $(rows[qRowIdx]);
+    const rawQImg = qRow.find("img").attr("src");
+    questionImgUrl = toAbsoluteUrl(rawQImg, baseUrl);
   }
 
   let isNotAnswered = false;
@@ -341,19 +361,35 @@ function parseQuestion(
 
   let chosenOption: number | null = null;
   let correctOption: number | null = null;
+  const options: any[] = [];
 
   optionRows.forEach((optRow, idx) => {
     const optNum = idx + 1;
+    let bg: string | null = null;
+
     optRow.find("td").each((_: any, td: any) => {
-      const bg = ($(td).attr("bgcolor") || "").toLowerCase();
-      if (bg === "green") {
-        chosenOption = optNum;
-        correctOption = optNum;
-      } else if (bg === "red") {
-        chosenOption = optNum;
-      } else if (bg === "yellow") {
-        correctOption = optNum;
-      }
+      const b = ($(td).attr("bgcolor") || "").toLowerCase();
+      if (b) bg = b;
+    });
+
+    const isCorrect = bg === "green" || bg === "yellow";
+    const isChosen = bg === "green" || bg === "red";
+
+    if (bg === "green") {
+      chosenOption = optNum;
+      correctOption = optNum;
+    } else if (bg === "red") {
+      chosenOption = optNum;
+    } else if (bg === "yellow") {
+      correctOption = optNum;
+    }
+
+    const optImg = optRow.find("img").attr("src");
+    options.push({
+      optionNumber: optNum,
+      imgUrl: toAbsoluteUrl(optImg, baseUrl),
+      isCorrect,
+      isChosen,
     });
   });
 
@@ -377,5 +413,7 @@ function parseQuestion(
     status,
     chosenOption,
     correctOption,
+    questionImgUrl,
+    options,
   };
 }

@@ -9,6 +9,14 @@ export interface CandidateInfo {
 
 export type QuestionStatus = "correct" | "wrong" | "unattempted";
 
+export interface QuestionOption {
+  optionNumber: number;
+  imgUrl: string | null;
+  text?: string | null;
+  isCorrect: boolean;
+  isChosen: boolean;
+}
+
 export interface QuestionDetail {
   qNum: number;
   sectionId: string;
@@ -16,6 +24,9 @@ export interface QuestionDetail {
   status: QuestionStatus;
   chosenOption: number | null;
   correctOption: number | null;
+  questionImgUrl?: string | null;
+  questionText?: string | null;
+  options?: QuestionOption[];
 }
 
 export interface SectionSummary {
