@@ -45,6 +45,7 @@ src/
 │   ├── db/
 │   │   ├── index.ts           # Neon serverless Postgres client, SKIP LOCKED queue & schema init
 │   │   └── schema.sql         # Normalized schema: examinations, exam_shifts, submissions, report_cards
+│   ├── pdf-generator.ts       # A4 print-optimized PDF generation (correct-only & all-options)
 │   ├── scoring.ts             # Pure client/shared marks calculation engine (+2 / -0.5)
 │   ├── ssc-parser.ts          # Core Cheerio scraping & ASP.NET WebForms postback engine
 │   └── worker.ts              # Queue processing worker with concurrency throttle

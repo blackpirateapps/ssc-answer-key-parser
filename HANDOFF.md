@@ -29,6 +29,7 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 | **Self-Driving Queue Polling** | ✅ Complete | Frontend automatically polls queue position and displays retro HN queue status banner. |
 | **Worker Drain Endpoint** | ✅ Complete | `/api/worker` endpoint ready for Vercel Cron or background queue draining. |
 | **Roll Number Deduplication** | ✅ Complete | Detects duplicate roll numbers across different URLs and displays "This roll number is already saved, showing saved results." |
+| **PDF Export (2 Modes)** | ✅ Complete | Download as PDF: (1) Correct Answers Only (Revision Sheet) and (2) Full Paper (All 4 Options & Answers). |
 | **High-Concurrency Caching** | ✅ Complete | In-memory LRU + Single-Flight deduplication + Pluggable Upstash Redis. |
 | **Hacker News UI** | ✅ Complete | Beige `#f6f6ef` & orange `#ff6600` theme; filterable question cards + compact table view. |
 | **Production Build** | ✅ Verified | Passes `npm run build` and `npx tsc --noEmit` cleanly. Tested on live sample. |
@@ -87,6 +88,15 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
    - The frontend renders an informative alert:
      `"This roll number is already saved, showing saved results."`
    - Prevents duplicate evaluations even if a candidate generates or pastes an alternate link.
+
+### E. PDF Download Engine (`src/lib/pdf-generator.ts`)
+1. **Bypassing Canvas CORS Restrictions:**
+   - Image assets on `sscexams.cbexams.com` do not include `Access-Control-Allow-Origin: *`.
+   - Client-side canvas libraries (e.g. `html2canvas`, `jspdf`) fail with canvas tainting security errors when trying to export cross-origin images.
+   - We utilize an A4 print-optimized document window with an image preloading barrier (`Promise.all(images.map(img => img.onload))`) that invokes `window.print()` / "Save as PDF" natively across all mobile and desktop browsers with 100% vector clarity and zero CORS issues.
+2. **Dual PDF Modes:**
+   - **Mode 1 (Just Correct Answers):** Shows candidate metadata, summary scoreboard, and questions with **only** the official correct answer option highlighted in green. Distractor options are stripped to create an uncluttered, compact revision sheet.
+   - **Mode 2 (All Options & Answers):** Complete question paper showing the full 4-option grid with correct answers badged in green and candidate choices highlighted.
 
 ---
 

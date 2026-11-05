@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScoreCardResponse, QuestionStatus, RawSectionReport } from "@/types";
 import { calculateClientScores } from "@/lib/scoring";
+import { downloadQuestionsPdf, PdfMode } from "@/lib/pdf-generator";
 
 const DEMO_URL =
   "https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd";
@@ -15,6 +16,7 @@ export default function Home() {
   const [filter, setFilter] = useState<QuestionStatus | "all">("all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [copied, setCopied] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
   const [queueState, setQueueState] = useState<{
     status: string;
     queuePosition?: number;
@@ -375,6 +377,53 @@ export default function Home() {
                   >
                     {copied ? "Link Copied!" : "Share Link"}
                   </button>
+
+                  {/* PDF Download Dropdown */}
+                  <div className="relative inline-block text-left">
+                    <button
+                      type="button"
+                      onClick={() => setPdfMenuOpen(!pdfMenuOpen)}
+                      className="text-xs bg-[#ff6600] text-black font-semibold border border-[#d85800] hover:bg-[#e65c00] active:bg-[#cc5200] px-2.5 py-0.5 cursor-pointer flex items-center gap-1"
+                    >
+                      <span>📥 Download PDF</span>
+                      <span className="text-[9px]">▼</span>
+                    </button>
+
+                    {pdfMenuOpen && (
+                      <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-400 shadow-md z-50 text-xs font-mono">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfMenuOpen(false);
+                            downloadQuestionsPdf(result, "correct_only");
+                          }}
+                          className="w-full text-left p-2.5 hover:bg-[#fff9e6] border-b border-gray-200 flex flex-col cursor-pointer"
+                        >
+                          <span className="font-bold text-black flex items-center gap-1.5">
+                            <span>📄</span> PDF: Just Correct Answers
+                          </span>
+                          <span className="text-[10px] text-gray-500 mt-0.5">
+                            Clean revision sheet showing only the correct answers
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfMenuOpen(false);
+                            downloadQuestionsPdf(result, "all_options");
+                          }}
+                          className="w-full text-left p-2.5 hover:bg-[#fff9e6] flex flex-col cursor-pointer"
+                        >
+                          <span className="font-bold text-black flex items-center gap-1.5">
+                            <span>📑</span> PDF: All Options &amp; Answers
+                          </span>
+                          <span className="text-[10px] text-gray-500 mt-0.5">
+                            Complete paper with all 4 options, chosen vs correct
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -576,6 +625,30 @@ export default function Home() {
                         }`}
                       >
                         Compact
+                      </button>
+                    </div>
+
+                    {/* Direct PDF Export Buttons */}
+                    <div className="inline-flex border border-gray-300 font-mono">
+                      <button
+                        type="button"
+                        onClick={() => downloadQuestionsPdf(result, "correct_only")}
+                        title="Download PDF showing only the correct answers for each question"
+                        className="bg-white hover:bg-[#fff9e6] text-black px-2 py-1 cursor-pointer flex items-center gap-1 text-[11px]"
+                      >
+                        <span>📄</span>
+                        <span className="hidden md:inline">PDF: Answers Only</span>
+                        <span className="md:hidden">Answers PDF</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadQuestionsPdf(result, "all_options")}
+                        title="Download PDF showing all 4 options with correct answers highlighted"
+                        className="bg-white hover:bg-[#fff9e6] text-black px-2 py-1 border-l border-gray-300 cursor-pointer flex items-center gap-1 text-[11px]"
+                      >
+                        <span>📑</span>
+                        <span className="hidden md:inline">PDF: Full Paper</span>
+                        <span className="md:hidden">Full PDF</span>
                       </button>
                     </div>
                   </div>
