@@ -8,6 +8,7 @@ export interface CandidateInfo {
 }
 
 export type QuestionStatus = "correct" | "wrong" | "unattempted";
+export type SubmissionStatus = "pending" | "processing" | "completed" | "failed";
 
 export interface QuestionOption {
   optionNumber: number;
@@ -46,6 +47,15 @@ export interface SectionSummary {
   unattemptedQuestions: number[];
 }
 
+export interface RawSectionReport {
+  sectionId: string;
+  sectionName: string;
+  totalQuestions: number;
+  correct: number;
+  wrong: number;
+  unattempted: number;
+}
+
 export interface OverallSummary {
   totalQuestions: number;
   attempted: number;
@@ -59,11 +69,17 @@ export interface OverallSummary {
 
 export interface ScoreCardResponse {
   success: boolean;
+  status?: SubmissionStatus;
+  submissionId?: number;
+  encKey?: string;
+  queuePosition?: number;
+  message?: string;
   cached?: boolean;
   fetchedAt?: string;
   candidate?: CandidateInfo;
   summary?: OverallSummary;
   sections?: SectionSummary[];
+  rawSections?: RawSectionReport[];
   questions?: QuestionDetail[];
   error?: string;
 }

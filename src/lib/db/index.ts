@@ -1,0 +1,482 @@
+import { neon, NeonQueryFunction } from "@neondatabase/serverless";
+import {
+  CandidateInfo,
+  QuestionDetail,
+  RawSectionReport,
+  ScoreCardResponse,
+  SectionSummary,
+  SubmissionStatus,
+} from "@/types";
+import { calculateClientScores } from "@/lib/scoring";
+
+let cachedSql: NeonQueryFunction<false, false> | null = null;
+let schemaInitialized = false;
+
+export function getDb(): NeonQueryFunction<false, false> | null {
+  const connectionString =
+    process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+  if (!connectionString) {
+    return null;
+  }
+  if (!cachedSql) {
+    cachedSql = neon(connectionString);
+  }
+  return cachedSql;
+}
+
+/**
+ * Automatically creates all tables and indexes if they do not exist.
+ * Runs once per serverless worker instance.
+ */
+export async function ensureSchema(): Promise<void> {
+  if (schemaInitialized) return;
+  const sql = getDb();
+  if (!sql) return;
+
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS examinations (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS exam_shifts (
+        id SERIAL PRIMARY KEY,
+        exam_id INTEGER NOT NULL REFERENCES examinations(id) ON DELETE CASCADE,
+        test_date VARCHAR(50) NOT NULL,
+        shift_time VARCHAR(100) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT uq_exam_shift UNIQUE (exam_id, test_date, shift_time)
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS submissions (
+        id SERIAL PRIMARY KEY,
+        enc_key VARCHAR(128) NOT NULL UNIQUE,
+        answer_key_url TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        error_message TEXT,
+        roll_no VARCHAR(50),
+        candidate_name VARCHAR(255),
+        centre VARCHAR(255),
+        exam_id INTEGER REFERENCES examinations(id) ON DELETE SET NULL,
+        shift_id INTEGER REFERENCES exam_shifts(id) ON DELETE SET NULL,
+        raw_questions JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        processed_at TIMESTAMPTZ
+      );
+    `;
+
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_submissions_status_created ON submissions(status, created_at);
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_submissions_enc_key ON submissions(enc_key);
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_submissions_roll_no ON submissions(roll_no);
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS report_cards (
+        id SERIAL PRIMARY KEY,
+        submission_id INTEGER NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+        section_id VARCHAR(10) NOT NULL,
+        section_name VARCHAR(100) NOT NULL,
+        total_questions INTEGER NOT NULL DEFAULT 25,
+        correct_count INTEGER NOT NULL DEFAULT 0,
+        wrong_count INTEGER NOT NULL DEFAULT 0,
+        unattempted_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT uq_submission_section UNIQUE (submission_id, section_id)
+      );
+    `;
+
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_report_cards_submission_id ON report_cards(submission_id);
+    `;
+
+    schemaInitialized = true;
+  } catch (err) {
+    console.warn("ensureSchema warning:", err);
+  }
+}
+
+export interface EnqueueResult {
+  id: number;
+  encKey: string;
+  status: SubmissionStatus;
+  isNew: boolean;
+}
+
+/**
+ * Saves the answer key URL immediately first into the submissions queue table.
+ * Takes ~10-20ms. High-concurrency safe via ON CONFLICT (enc_key).
+ */
+export async function enqueueSubmission(
+  rawUrl: string,
+  encKey: string
+): Promise<EnqueueResult | null> {
+  const sql = getDb();
+  if (!sql) return null;
+  await ensureSchema();
+
+  const rows = await sql`
+    INSERT INTO submissions (enc_key, answer_key_url, status)
+    VALUES (${encKey}, ${rawUrl}, 'pending')
+    ON CONFLICT (enc_key) DO UPDATE
+      SET updated_at = NOW()
+    RETURNING id, status, enc_key, (xmax = 0) AS is_new;
+  `;
+
+  if (rows.length === 0) return null;
+
+  return {
+    id: rows[0].id,
+    encKey: rows[0].enc_key,
+    status: rows[0].status as SubmissionStatus,
+    isNew: Boolean(rows[0].is_new),
+  };
+}
+
+/**
+ * Checks queue position for a given submission ID.
+ */
+export async function getQueuePosition(submissionId: number): Promise<number> {
+  const sql = getDb();
+  if (!sql) return 0;
+
+  try {
+    const rows = await sql`
+      SELECT COUNT(*)::int AS pos
+      FROM submissions
+      WHERE status = 'pending'
+        AND created_at < (SELECT created_at FROM submissions WHERE id = ${submissionId});
+    `;
+    return (rows[0]?.pos ?? 0) + 1;
+  } catch {
+    return 1;
+  }
+}
+
+/**
+ * Counts how many submissions are currently in 'processing' status.
+ */
+export async function getActiveProcessingCount(): Promise<number> {
+  const sql = getDb();
+  if (!sql) return 0;
+
+  try {
+    const rows = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM submissions
+      WHERE status = 'processing'
+        AND updated_at > NOW() - INTERVAL '45 seconds';
+    `;
+    return rows[0]?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export interface ClaimedSubmission {
+  id: number;
+  encKey: string;
+  answerKeyUrl: string;
+}
+
+/**
+ * Claims the next pending submission using PostgreSQL FOR UPDATE SKIP LOCKED.
+ * Enforces strict concurrency cap to avoid overwhelming cbexams.com.
+ */
+export async function claimNextSubmission(
+  concurrencyCap = 2,
+  targetSubmissionId?: number
+): Promise<ClaimedSubmission | null> {
+  const sql = getDb();
+  if (!sql) return null;
+  await ensureSchema();
+
+  const activeCount = await getActiveProcessingCount();
+  if (activeCount >= concurrencyCap) {
+    return null;
+  }
+
+  try {
+    let rows;
+    if (targetSubmissionId) {
+      // Opportunistically claim this specific pending submission if slot available
+      rows = await sql`
+        WITH next_job AS (
+          SELECT id FROM submissions
+          WHERE id = ${targetSubmissionId}
+            AND (status = 'pending' OR (status = 'processing' AND updated_at < NOW() - INTERVAL '45 seconds'))
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE submissions
+        SET status = 'processing', updated_at = NOW()
+        FROM next_job
+        WHERE submissions.id = next_job.id
+        RETURNING submissions.id, submissions.enc_key, submissions.answer_key_url;
+      `;
+    }
+
+    if (!rows || rows.length === 0) {
+      // Pick next oldest pending item in the queue
+      rows = await sql`
+        WITH next_job AS (
+          SELECT id FROM submissions
+          WHERE status = 'pending'
+             OR (status = 'processing' AND updated_at < NOW() - INTERVAL '45 seconds')
+          ORDER BY created_at ASC
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE submissions
+        SET status = 'processing', updated_at = NOW()
+        FROM next_job
+        WHERE submissions.id = next_job.id
+        RETURNING submissions.id, submissions.enc_key, submissions.answer_key_url;
+      `;
+    }
+
+    if (rows && rows.length > 0) {
+      return {
+        id: rows[0].id,
+        encKey: rows[0].enc_key,
+        answerKeyUrl: rows[0].answer_key_url,
+      };
+    }
+  } catch (err) {
+    console.error("claimNextSubmission error:", err);
+  }
+
+  return null;
+}
+
+/**
+ * Saves completed submission data:
+ * 1. Upserts & deduplicates examination title -> returns exam_id
+ * 2. Upserts & deduplicates exam shift date & time -> returns shift_id
+ * 3. Updates submission master record with candidate info & raw questions
+ * 4. Inserts subjectwise report_cards (correct, wrong, unattempted)
+ */
+export async function saveCompletedSubmission(params: {
+  submissionId: number;
+  candidate: CandidateInfo;
+  sections: SectionSummary[];
+  questions?: QuestionDetail[];
+}): Promise<void> {
+  const sql = getDb();
+  if (!sql) return;
+
+  const { submissionId, candidate, sections, questions } = params;
+
+  // 1. Examination (deduplicated)
+  const examName =
+    candidate.examLevel.trim() || "Combined Graduate Level Examination, 2026";
+  const examRows = await sql`
+    INSERT INTO examinations (name)
+    VALUES (${examName})
+    ON CONFLICT (name) DO UPDATE
+      SET name = EXCLUDED.name
+    RETURNING id;
+  `;
+  const examId = examRows[0]?.id;
+
+  // 2. Exam Shift (deduplicated per exam)
+  const testDate = candidate.testDate.trim() || "N/A";
+  const shiftTime = candidate.shift.trim() || "N/A";
+  const shiftRows = await sql`
+    INSERT INTO exam_shifts (exam_id, test_date, shift_time)
+    VALUES (${examId}, ${testDate}, ${shiftTime})
+    ON CONFLICT (exam_id, test_date, shift_time) DO UPDATE
+      SET shift_time = EXCLUDED.shift_time
+    RETURNING id;
+  `;
+  const shiftId = shiftRows[0]?.id;
+
+  // 3. Update master submission record
+  const rawQuestionsJson = questions ? JSON.stringify(questions) : null;
+
+  await sql`
+    UPDATE submissions
+    SET roll_no = ${candidate.rollNo},
+        candidate_name = ${candidate.name},
+        centre = ${candidate.centre},
+        exam_id = ${examId},
+        shift_id = ${shiftId},
+        raw_questions = ${rawQuestionsJson}::jsonb,
+        status = 'completed',
+        error_message = NULL,
+        processed_at = NOW(),
+        updated_at = NOW()
+    WHERE id = ${submissionId};
+  `;
+
+  // 4. Upsert subjectwise report_cards (storing raw correct, wrong, unattempted)
+  for (const sec of sections) {
+    await sql`
+      INSERT INTO report_cards (
+        submission_id,
+        section_id,
+        section_name,
+        total_questions,
+        correct_count,
+        wrong_count,
+        unattempted_count
+      )
+      VALUES (
+        ${submissionId},
+        ${sec.id},
+        ${sec.name},
+        ${sec.totalQuestions || 25},
+        ${sec.correct},
+        ${sec.wrong},
+        ${sec.unattempted}
+      )
+      ON CONFLICT (submission_id, section_id) DO UPDATE
+        SET total_questions = EXCLUDED.total_questions,
+            correct_count = EXCLUDED.correct_count,
+            wrong_count = EXCLUDED.wrong_count,
+            unattempted_count = EXCLUDED.unattempted_count;
+    `;
+  }
+}
+
+/**
+ * Marks a submission as failed with error details.
+ */
+export async function markSubmissionFailed(
+  submissionId: number,
+  errorMessage: string
+): Promise<void> {
+  const sql = getDb();
+  if (!sql) return;
+
+  await sql`
+    UPDATE submissions
+    SET status = 'failed',
+        error_message = ${errorMessage},
+        updated_at = NOW()
+    WHERE id = ${submissionId};
+  `;
+}
+
+/**
+ * Retrieves a submission by EncKey or ID from Postgres.
+ * If completed, reconstructs candidate details and subjectwise report cards.
+ */
+export async function getSubmissionRecord(
+  encKey: string
+): Promise<ScoreCardResponse | null> {
+  const sql = getDb();
+  if (!sql) return null;
+  await ensureSchema();
+
+  const subRows = await sql`
+    SELECT s.id,
+           s.enc_key,
+           s.answer_key_url,
+           s.status,
+           s.error_message,
+           s.roll_no,
+           s.candidate_name,
+           s.centre,
+           s.raw_questions,
+           s.created_at,
+           s.processed_at,
+           e.name AS exam_name,
+           es.test_date,
+           es.shift_time
+    FROM submissions s
+    LEFT JOIN examinations e ON s.exam_id = e.id
+    LEFT JOIN exam_shifts es ON s.shift_id = es.id
+    WHERE s.enc_key = ${encKey}
+    LIMIT 1;
+  `;
+
+  if (subRows.length === 0) {
+    return null;
+  }
+
+  const sub = subRows[0];
+  const status = sub.status as SubmissionStatus;
+
+  if (status === "pending" || status === "processing") {
+    const queuePos = await getQueuePosition(sub.id);
+    return {
+      success: true,
+      status,
+      submissionId: sub.id,
+      encKey: sub.enc_key,
+      queuePosition: queuePos,
+      message:
+        status === "processing"
+          ? "Processing answer key..."
+          : `Queued at position #${queuePos}. Processing one by one...`,
+    };
+  }
+
+  if (status === "failed") {
+    return {
+      success: false,
+      status: "failed",
+      submissionId: sub.id,
+      encKey: sub.enc_key,
+      error: sub.error_message || "Failed to process answer key.",
+    };
+  }
+
+  // If completed, fetch report card sections
+  const reportRows = await sql`
+    SELECT section_id,
+           section_name,
+           total_questions,
+           correct_count,
+           wrong_count,
+           unattempted_count
+    FROM report_cards
+    WHERE submission_id = ${sub.id}
+    ORDER BY section_id ASC;
+  `;
+
+  const rawSections: RawSectionReport[] = reportRows.map((r) => ({
+    sectionId: r.section_id,
+    sectionName: r.section_name,
+    totalQuestions: r.total_questions,
+    correct: r.correct_count,
+    wrong: r.wrong_count,
+    unattempted: r.unattempted_count,
+  }));
+
+  // Browser score calculator reconstructs section marks & overall summary
+  const { sections, summary } = calculateClientScores(rawSections);
+
+  const candidate: CandidateInfo = {
+    rollNo: sub.roll_no || "N/A",
+    name: sub.candidate_name || "N/A",
+    examLevel: sub.exam_name || "Combined Graduate Level Examination, 2026",
+    testDate: sub.test_date || "N/A",
+    shift: sub.shift_time || "N/A",
+    centre: sub.centre || "N/A",
+  };
+
+  return {
+    success: true,
+    status: "completed",
+    submissionId: sub.id,
+    encKey: sub.enc_key,
+    candidate,
+    rawSections,
+    sections,
+    summary,
+    questions: (sub.raw_questions as QuestionDetail[]) || [],
+    fetchedAt: sub.processed_at ? new Date(sub.processed_at).toISOString() : undefined,
+  };
+}

@@ -15,21 +15,28 @@ const memoryCache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<ScoreCardResponse>>();
 
 /**
- * Normalizes an SSC answer key URL to a consistent cache key.
- * Primarily based on the EncKey parameter or the full sanitized URL.
+ * Normalizes an SSC answer key URL to its unique EncKey parameter or slug.
  */
-export function getCacheKey(rawUrl: string): string {
+export function extractEncKey(rawUrl: string): string {
   try {
     const parsed = new URL(rawUrl.trim());
     const encKey = parsed.searchParams.get("EncKey");
     if (encKey) {
-      return `ssc:enc:${encKey.trim()}`;
+      return encKey.trim();
     }
-    // Fallback: stripped URL without fragments
-    return `ssc:url:${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString()}`;
+    return Buffer.from(parsed.pathname + parsed.search).toString("base64url").slice(0, 40);
   } catch {
-    return `ssc:raw:${rawUrl.trim()}`;
+    return Buffer.from(rawUrl.trim()).toString("base64url").slice(0, 40);
   }
+}
+
+/**
+ * Normalizes an SSC answer key URL to a consistent cache key.
+ * Primarily based on the EncKey parameter or the full sanitized URL.
+ */
+export function getCacheKey(rawUrl: string): string {
+  const encKey = extractEncKey(rawUrl);
+  return `ssc:enc:${encKey}`;
 }
 
 /**

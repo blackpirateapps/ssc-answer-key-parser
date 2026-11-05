@@ -23,7 +23,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ---
 
 ## 1. Project Purpose
-This repository provides a lightweight, ultra-fast, Hacker News-themed web application to parse SSC CGL response sheet URLs (hosted on `sscexams.cbexams.com`) and display accurate scores and section-wise breakdowns. It is designed to run on Vercel Serverless Functions and absorb extreme traffic spikes (10k+ concurrent requests).
+This repository provides a lightweight, ultra-fast, Hacker News-themed web application to parse SSC CGL response sheet URLs (hosted on `sscexams.cbexams.com`), calculate raw scores (+2 for correct, -0.5 for wrong), and persist submissions into Neon Serverless PostgreSQL. It is engineered to absorb extreme traffic spikes (10k–100k concurrent requests) via an immediate-save URL intake queue and controlled sequential scraping.
 
 ---
 
@@ -33,16 +33,27 @@ This repository provides a lightweight, ultra-fast, Hacker News-themed web appli
 src/
 ├── app/
 │   ├── api/
-│   │   └── check/
-│   │       └── route.ts       # Serverless API endpoint (GET & POST) with caching
+│   │   ├── check/
+│   │   │   └── route.ts       # Serverless URL intake & polling endpoint with Neon + Cache
+│   │   └── worker/
+│   │       └── route.ts       # Cron/queue drain endpoint (drains pending jobs one by one)
 │   ├── globals.css            # Tailwind v4 configuration + HN beige/orange theme vars
 │   ├── layout.tsx             # Root layout with metadata and font setup
-│   └── page.tsx               # Client UI component (Hacker News aesthetic)
+│   └── page.tsx               # Client UI component (Hacker News aesthetic, polling, browser score calc)
 ├── lib/
 │   ├── cache.ts               # In-memory LRU + Single-Flight deduplication + Upstash Redis
-│   └── ssc-parser.ts          # Core Cheerio scraping & ASP.NET WebForms postback engine
+│   ├── db/
+│   │   ├── index.ts           # Neon serverless Postgres client, SKIP LOCKED queue & schema init
+│   │   └── schema.sql         # Normalized schema: examinations, exam_shifts, submissions, report_cards
+│   ├── scoring.ts             # Pure client/shared marks calculation engine (+2 / -0.5)
+│   ├── ssc-parser.ts          # Core Cheerio scraping & ASP.NET WebForms postback engine
+│   └── worker.ts              # Queue processing worker with concurrency throttle
 └── types/
-    └── index.ts               # Strongly typed data models (Candidate, Question, Summary)
+    └── index.ts               # Strongly typed data models (Candidate, Question, Submission, Summary)
+scripts/
+├── init-db.mjs                # Standalone database migration runner (`npm run db:init`)
+├── test-scoring.ts            # Scoring unit test
+└── test-scraper.ts            # Live cbexams integration verification test
 vercel.json                    # Deploys functions to Mumbai ("bom1") to bypass India geo-blocks
 HANDOFF.md                     # Comprehensive project status, test logs, and next milestones
 AGENTS.md                      # Instructions, architectural patterns, and scraping rules for agents
@@ -50,60 +61,53 @@ AGENTS.md                      # Instructions, architectural patterns, and scrap
 
 ---
 
-## 3. Strict Scraping & ASP.NET Rules
+## 3. Strict Database & Queue Rules
 
-When modifying or expanding `src/lib/ssc-parser.ts`, follow these verified rules:
+1. **Answer Key URLs Saved First:**
+   - In `src/app/api/check/route.ts`, the incoming URL is immediately saved to the `submissions` table with `status = 'pending'` (<20ms write).
+   - This ensures zero dropped requests even when 10k–100k users submit at the exact same moment.
+2. **PostgreSQL Row-Level Locking (`FOR UPDATE SKIP LOCKED`):**
+   - Background processing uses `SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1`.
+   - Never use standard `SELECT` or client-side locks for queue management; `SKIP LOCKED` prevents duplicate scrapes across serverless functions.
+3. **Scraper Concurrency Cap:**
+   - Strict limit of **2 concurrent outbound requests** to `sscexams.cbexams.com` (`SCRAPER_CONCURRENCY_CAP = 2` in `src/lib/worker.ts`).
+   - Protects the external portal from being blocked or knocked offline.
+4. **Data Normalization:**
+   - Examination titles are deduplicated in `examinations` (referenced by `exam_id`).
+   - Shifts and dates are deduplicated in `exam_shifts` (referenced by `shift_id`).
+   - `report_cards` stores pure counts (`correct_count`, `wrong_count`, `unattempted_count`).
+5. **Marks Calculation in Browser:**
+   - The database stores raw counts. Marks calculation (+2.00 correct, -0.50 wrong, net scores, accuracy) executes inside the browser via `src/lib/scoring.ts`.
+
+---
+
+## 4. Strict Scraping & ASP.NET Rules
 
 1. **Deploy to Mumbai, India (`bom1`):**
    - `cbexams.com` is protected by Cloudflare with **strict Geo-blocking for non-Indian IPs**.
    - Serverless functions must run in Mumbai (`vercel.json` -> `"regions": ["bom1"]`).
-   - If AWS datacenters get blocked during high-traffic exam days, use the built-in `PROXY_URL` environment variable (via `undici.ProxyAgent`).
+   - If AWS datacenters get blocked during high-traffic exam days, use `PROXY_URL` (via `undici.ProxyAgent`).
 2. **Do NOT submit `ddltest` in POST bodies:**
-   - The dropdown `<select id="ddltest">` is disabled in HTML. If included in POST data, ASP.NET throws `System.ArgumentException: Invalid postback or callback argument`.
+   - The dropdown `<select id="ddltest">` is disabled in HTML. Submitting it causes ASP.NET to throw `Invalid postback or callback argument`.
 3. **Fetch Parts B, C, D in Parallel:**
-   - All three parts use the ViewState, ViewStateGenerator, and EventValidation extracted from Part A. They run concurrently via `Promise.all`.
+   - All three parts use the ViewState, ViewStateGenerator, and EventValidation extracted from Part A via `Promise.all`.
 4. **Session Cookies:**
    - Always extract and pass the `ASP.NET_SessionId` cookie from Part A into subsequent requests.
 5. **Target Specific `<font>` Tags for Question Tables:**
-   - Never use `closest('table')` on generic wrapper `td` tags. Always filter `<font>` tags matching `Q.No: <num>`, and call `.closest('table')` on that element.
+   - Always select innermost `<font>` matching `Q.No: <num>`, and call `.closest('table')`.
 6. **Dynamic Row Layouts:**
-   - Part A, B, and C have a "Hindi version" button row at index 0. Part D (English) does not. Never hardcode row indices `[3, 4, 5, 6]`. Locate the question row by looking for text containing `Q.No:`, and find the 4 option rows by locating `<img>` tags.
-7. **Color Semantics:**
-   - `bgcolor="green"` → Correctly chosen by candidate (+2.00).
-   - `bgcolor="red"` → Chosen option is wrong (-0.50).
-   - `bgcolor="yellow"` → Official correct answer.
-   - `bgcolor="gray"` or `Not Answered` text → Left unattempted (0.00).
+   - Parts A–C have a "Hindi version" button row at index 0; Part D does not. Never hardcode row indices `[3, 4, 5, 6]`. Locate rows dynamically by checking for `Q.No:` and `<img>`.
 
 ---
 
-## 4. Concurrency & Performance Rules
-
-* **Single-Flight Deduplication:** Every fetch must go through `singleFlight(cacheKey, fn)`. This protects the source server (`cbexams.com`) from being knocked offline when thousands of users enter identical URLs.
-* **Cache Key Normalization:** Always key by `EncKey` param from the URL using `getCacheKey()`.
-* **Zero Heavy Dependencies:** Never add headless browser dependencies (Puppeteer, Playwright, Chromium). Cheerio + fetch handles 100% of the scraping requirement in milliseconds.
-
----
-
-## 5. Next Steps / Database Integration Blueprint
-
-When adding the database and ranking system requested by the user:
-* **Database:** Use Serverless PostgreSQL (Neon or Supabase). Do NOT use SQLite (single-writer locks will choke at scale, and serverless local files are ephemeral).
-* **Rank Queries:** Use native Postgres window functions:
-  * Overall: `RANK() OVER (ORDER BY total_marks DESC)`
-  * Category: `RANK() OVER (PARTITION BY category ORDER BY total_marks DESC)`
-  * Shift: `RANK() OVER (PARTITION BY test_date, shift ORDER BY total_marks DESC)`
-* **Indexes:** Ensure indexes on `(total_marks DESC)` and `(category, total_marks DESC)`.
-
----
-
-## 6. Verification Checklist Before Committing
+## 5. Verification Checklist Before Committing
 
 Always run the following commands before completing any task:
 1. `npx tsc --noEmit` — verify 0 TypeScript errors.
 2. `npm run build` — verify production Next.js build succeeds with static + dynamic routes.
-3. Test with the live verified URL:
-   `https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd`
-   (Expected: Score 118.50, Correct 64, Wrong 19, Left 17).
+3. Run verification scripts:
+   - `npx tsx scripts/test-scoring.ts`
+   - `npx tsx scripts/test-scraper.ts` (Expected score: **118.50**, Correct: **64**, Wrong: **19**, Left: **17**).
 4. **Update `HANDOFF.md` with session summary and current state.**
 5. Update `AGENTS.md` if any rules or architectural patterns evolved.
 6. Commit and push to `origin/main`.
