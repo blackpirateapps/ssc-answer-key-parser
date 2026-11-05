@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
 import {
   CandidateInfo,
   OverallSummary,
@@ -7,8 +8,32 @@ import {
   SectionSummary,
 } from "@/types";
 
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+if (process.env.PROXY_URL) {
+  try {
+    const dispatcher = new ProxyAgent(process.env.PROXY_URL);
+    setGlobalDispatcher(dispatcher);
+    console.log("Global proxy dispatcher configured with PROXY_URL");
+  } catch (err) {
+    console.warn("Failed to set ProxyAgent:", err);
+  }
+}
+
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+  "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+  "Sec-Ch-Ua":
+    '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"Windows"',
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
 
 const SECTIONS_CONFIG = [
   {
@@ -55,12 +80,7 @@ export async function parseSscAnswerKey(rawUrl: string): Promise<ScoreCardRespon
 
   // 2. Fetch Part A (Initial GET)
   const partARes = await fetch(cleanUrl, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      Accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
+    headers: BROWSER_HEADERS,
     cache: "no-store",
   });
 
@@ -206,10 +226,12 @@ async function fetchPart(
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      "User-Agent": USER_AGENT,
+      ...BROWSER_HEADERS,
       "Content-Type": "application/x-www-form-urlencoded",
       Cookie: formData.cookies,
       Referer: url,
+      Origin: new URL(url).origin,
+      "Sec-Fetch-Site": "same-origin",
     },
     body: body.toString(),
     cache: "no-store",
