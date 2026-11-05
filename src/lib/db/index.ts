@@ -1,6 +1,8 @@
 import { neon, NeonQueryFunction } from "@neondatabase/serverless";
 import {
   CandidateInfo,
+  ExamShiftSummary,
+  ExaminationSummary,
   QuestionDetail,
   RawSectionReport,
   ScoreCardResponse,
@@ -553,4 +555,194 @@ export async function getSubmissionRecord(
     questions: (sub.raw_questions as QuestionDetail[]) || [],
     fetchedAt: sub.processed_at ? new Date(sub.processed_at).toISOString() : undefined,
   };
+}
+
+/**
+ * Retrieves all examinations with aggregated student counts, average scores, and highest scores.
+ */
+export async function getExaminationsList(): Promise<ExaminationSummary[]> {
+  const sql = getDb();
+  if (!sql) {
+    return [
+      {
+        id: 1,
+        name: "Combined Graduate Level Examination, 2026",
+        studentCount: 2,
+        avgScore: 127.25,
+        maxScore: 136.0,
+        shiftsCount: 2,
+      },
+    ];
+  }
+
+  await ensureSchema();
+
+  try {
+    const rows = await sql`
+      WITH sub_scores AS (
+        SELECT 
+          s.id AS submission_id,
+          s.exam_id,
+          SUM(rc.correct_count * 2.0 - rc.wrong_count * 0.5) AS total_score
+        FROM submissions s
+        JOIN report_cards rc ON rc.submission_id = s.id
+        WHERE s.status = 'completed' AND s.exam_id IS NOT NULL
+        GROUP BY s.id, s.exam_id
+      )
+      SELECT 
+        e.id,
+        e.name,
+        COUNT(DISTINCT es.id)::int AS shifts_count,
+        COUNT(DISTINCT ss.submission_id)::int AS student_count,
+        COALESCE(ROUND(AVG(ss.total_score)::numeric, 2), 0)::float AS avg_score,
+        COALESCE(ROUND(MAX(ss.total_score)::numeric, 2), 0)::float AS max_score
+      FROM examinations e
+      LEFT JOIN exam_shifts es ON es.exam_id = e.id
+      LEFT JOIN sub_scores ss ON ss.exam_id = e.id
+      GROUP BY e.id, e.name
+      ORDER BY student_count DESC, e.id DESC;
+    `;
+
+    if (rows.length === 0) {
+      return [
+        {
+          id: 1,
+          name: "Combined Graduate Level Examination, 2026",
+          studentCount: 0,
+          avgScore: 0,
+          maxScore: 0,
+          shiftsCount: 0,
+        },
+      ];
+    }
+
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      studentCount: r.student_count || 0,
+      avgScore: r.avg_score || 0,
+      maxScore: r.max_score || 0,
+      shiftsCount: r.shifts_count || 0,
+    }));
+  } catch (err) {
+    console.warn("getExaminationsList query error:", err);
+    return [];
+  }
+}
+
+/**
+ * Retrieves examination statistics including shift-wise candidate counts and average scores.
+ */
+export async function getExaminationDetails(
+  examId: number
+): Promise<ExaminationSummary | null> {
+  const sql = getDb();
+  if (!sql) {
+    if (examId === 1) {
+      return {
+        id: 1,
+        name: "Combined Graduate Level Examination, 2026",
+        studentCount: 2,
+        avgScore: 127.25,
+        maxScore: 136.0,
+        shiftsCount: 2,
+        shifts: [
+          {
+            id: 1,
+            testDate: "05 Oct 2026",
+            shiftTime: "10:00 AM (Shift-1)",
+            studentCount: 1,
+            avgScore: 118.5,
+            maxScore: 118.5,
+          },
+          {
+            id: 2,
+            testDate: "10 Oct 2026",
+            shiftTime: "01:30 PM (Shift-2)",
+            studentCount: 1,
+            avgScore: 136.0,
+            maxScore: 136.0,
+          },
+        ],
+      };
+    }
+    return null;
+  }
+
+  await ensureSchema();
+
+  try {
+    const examRows = await sql`
+      WITH sub_scores AS (
+        SELECT 
+          s.id AS submission_id,
+          s.exam_id,
+          SUM(rc.correct_count * 2.0 - rc.wrong_count * 0.5) AS total_score
+        FROM submissions s
+        JOIN report_cards rc ON rc.submission_id = s.id
+        WHERE s.status = 'completed' AND s.exam_id = ${examId}
+        GROUP BY s.id, s.exam_id
+      )
+      SELECT 
+        e.id,
+        e.name,
+        COUNT(DISTINCT ss.submission_id)::int AS student_count,
+        COALESCE(ROUND(AVG(ss.total_score)::numeric, 2), 0)::float AS avg_score,
+        COALESCE(ROUND(MAX(ss.total_score)::numeric, 2), 0)::float AS max_score
+      FROM examinations e
+      LEFT JOIN sub_scores ss ON ss.exam_id = e.id
+      WHERE e.id = ${examId}
+      GROUP BY e.id, e.name;
+    `;
+
+    if (examRows.length === 0) return null;
+    const exam = examRows[0];
+
+    const shiftRows = await sql`
+      WITH sub_scores AS (
+        SELECT 
+          s.id AS submission_id,
+          s.shift_id,
+          SUM(rc.correct_count * 2.0 - rc.wrong_count * 0.5) AS total_score
+        FROM submissions s
+        JOIN report_cards rc ON rc.submission_id = s.id
+        WHERE s.status = 'completed' AND s.exam_id = ${examId}
+        GROUP BY s.id, s.shift_id
+      )
+      SELECT 
+        es.id,
+        es.test_date,
+        es.shift_time,
+        COUNT(DISTINCT ss.submission_id)::int AS student_count,
+        COALESCE(ROUND(AVG(ss.total_score)::numeric, 2), 0)::float AS avg_score,
+        COALESCE(ROUND(MAX(ss.total_score)::numeric, 2), 0)::float AS max_score
+      FROM exam_shifts es
+      LEFT JOIN sub_scores ss ON ss.shift_id = es.id
+      WHERE es.exam_id = ${examId}
+      GROUP BY es.id, es.test_date, es.shift_time
+      ORDER BY es.test_date ASC, es.shift_time ASC;
+    `;
+
+    const shifts: ExamShiftSummary[] = shiftRows.map((s) => ({
+      id: s.id,
+      testDate: s.test_date,
+      shiftTime: s.shift_time,
+      studentCount: s.student_count || 0,
+      avgScore: s.avg_score || 0,
+      maxScore: s.max_score || 0,
+    }));
+
+    return {
+      id: exam.id,
+      name: exam.name,
+      studentCount: exam.student_count || 0,
+      avgScore: exam.avg_score || 0,
+      maxScore: exam.max_score || 0,
+      shiftsCount: shifts.length,
+      shifts,
+    };
+  } catch (err) {
+    console.warn("getExaminationDetails query error:", err);
+    return null;
+  }
 }

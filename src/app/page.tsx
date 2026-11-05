@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ScoreCardResponse, QuestionStatus, RawSectionReport } from "@/types";
+import {
+  ScoreCardResponse,
+  QuestionStatus,
+  RawSectionReport,
+  ExaminationSummary,
+} from "@/types";
 import { calculateClientScores } from "@/lib/scoring";
 import { downloadQuestionsPdf } from "@/lib/pdf-generator";
 import {
@@ -33,6 +38,10 @@ import {
   FileCheck2,
   X,
   ExternalLink,
+  Users,
+  BarChart3,
+  TrendingUp,
+  Award,
 } from "lucide-react";
 
 function GithubIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -71,6 +80,55 @@ export default function Home() {
     message?: string;
     encKey?: string;
   } | null>(null);
+
+  const [examinations, setExaminations] = useState<ExaminationSummary[]>([]);
+  const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
+  const [examDetails, setExamDetails] = useState<Record<number, ExaminationSummary>>({});
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [loadingExamId, setLoadingExamId] = useState<number | null>(null);
+
+  const fetchExaminations = async () => {
+    try {
+      setLoadingExams(true);
+      const res = await fetch("/api/examinations");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.examinations)) {
+        setExaminations(data.examinations);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch examinations:", err);
+    } finally {
+      setLoadingExams(false);
+    }
+  };
+
+  const handleSelectExam = async (examId: number) => {
+    if (selectedExamId === examId) {
+      setSelectedExamId(null);
+      return;
+    }
+    setSelectedExamId(examId);
+
+    if (!examDetails[examId]) {
+      try {
+        setLoadingExamId(examId);
+        const res = await fetch(`/api/examinations?id=${examId}`);
+        const data = await res.json();
+        if (data.success && data.examination) {
+          setExamDetails((prev) => ({ ...prev, [examId]: data.examination }));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch examination details:", err);
+      } finally {
+        setLoadingExamId(null);
+      }
+    }
+  };
+
+  // Fetch examinations list on initial mount
+  useEffect(() => {
+    fetchExaminations();
+  }, []);
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -131,6 +189,7 @@ export default function Home() {
     } else {
       setResult(data);
     }
+    fetchExaminations();
   };
 
   const startPolling = (encKey: string) => {
@@ -1063,6 +1122,195 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {/* Examinations List & Statistics */}
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-7 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Examinations &amp; Live Statistics
+                </h2>
+                <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200/60">
+                  Live Benchmarks
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Click any examination below to view student submissions, average scores, and shift breakdown.
+              </p>
+            </div>
+            {loadingExams && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                <span>Updating stats...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Examinations List */}
+          {examinations.length === 0 && !loadingExams ? (
+            <div className="text-center py-6 text-xs text-slate-500">
+              No examinations recorded yet. Paste your answer key above to start evaluating.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {examinations.map((exam) => {
+                const isExpanded = selectedExamId === exam.id;
+                const details = examDetails[exam.id] || exam;
+                const isLoadingThis = loadingExamId === exam.id;
+
+                return (
+                  <div
+                    key={exam.id}
+                    className={`rounded-xl border transition-all ${
+                      isExpanded
+                        ? "border-blue-200 bg-blue-50/20 shadow-xs ring-1 ring-blue-500/20"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSelectExam(exam.id)}
+                      className="w-full text-left p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center shrink-0 mt-0.5">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 text-sm sm:text-base leading-snug">
+                            {exam.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Official Staff Selection Commission examination evaluation
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center flex-wrap gap-2.5 self-start sm:self-center">
+                        <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
+                          <Users className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{exam.studentCount} Students</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-emerald-200">
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Avg: {exam.avgScore > 0 ? exam.avgScore.toFixed(2) : "N/A"}</span>
+                        </span>
+                        <span className="text-slate-400 p-1">
+                          {isLoadingThis ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                          ) : isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Expanded Details Panel */}
+                    {isExpanded && (
+                      <div className="px-4 pb-5 pt-1 sm:px-5 border-t border-slate-200/60 mt-1 animate-in fade-in duration-200 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-slate-500 text-xs mb-1">
+                              <Users className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Total Candidates</span>
+                            </div>
+                            <div className="font-bold text-lg text-slate-900 tabular-numbers">
+                              {details.studentCount}
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-blue-700 text-xs mb-1">
+                              <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Overall Average Score</span>
+                            </div>
+                            <div className="font-bold text-lg text-blue-900 tabular-numbers">
+                              {details.avgScore > 0 ? details.avgScore.toFixed(2) : "0.00"}{" "}
+                              <span className="text-xs text-slate-400 font-normal">/ 200</span>
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+                            <div className="flex items-center justify-center gap-1.5 text-emerald-700 text-xs mb-1">
+                              <Award className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Highest Recorded Score</span>
+                            </div>
+                            <div className="font-bold text-lg text-emerald-800 tabular-numbers">
+                              {details.maxScore > 0 ? details.maxScore.toFixed(2) : "0.00"}{" "}
+                              <span className="text-xs text-slate-400 font-normal">/ 200</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Shift-Wise Breakdown */}
+                        {details.shifts && details.shifts.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 pt-1">
+                              Shift-Wise Candidate Counts &amp; Average Scores
+                            </div>
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                              <table className="w-full text-xs text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th className="p-2.5 font-semibold">Test Date</th>
+                                    <th className="p-2.5 font-semibold">Shift Timing</th>
+                                    <th className="p-2.5 font-semibold text-center">Candidates</th>
+                                    <th className="p-2.5 font-semibold text-right">Shift Average</th>
+                                    <th className="p-2.5 font-semibold text-right">Highest</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {details.shifts.map((s) => (
+                                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                                      <td className="p-2.5 font-medium text-slate-800">
+                                        {s.testDate}
+                                      </td>
+                                      <td className="p-2.5 text-slate-600">{s.shiftTime}</td>
+                                      <td className="p-2.5 text-center font-semibold text-slate-900 tabular-numbers">
+                                        {s.studentCount}
+                                      </td>
+                                      <td className="p-2.5 text-right font-bold text-blue-700 tabular-numbers">
+                                        {s.avgScore.toFixed(2)}
+                                      </td>
+                                      <td className="p-2.5 text-right font-semibold text-slate-800 tabular-numbers">
+                                        {s.maxScore.toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500 italic p-2 text-center">
+                            No shift submissions recorded for this examination yet.
+                          </div>
+                        )}
+
+                        {/* Quick CTA to scroll up to calculate */}
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Calculate your score for this exam</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Modern Clean Footer */}

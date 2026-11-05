@@ -35,6 +35,8 @@ src/
 │   ├── api/
 │   │   ├── check/
 │   │   │   └── route.ts       # Serverless URL intake & polling endpoint with Neon + Cache
+│   │   ├── examinations/
+│   │   │   └── route.ts       # Aggregated examination statistics & shift breakdown API
 │   │   └── worker/
 │   │       └── route.ts       # Cron/queue drain endpoint (drains pending jobs one by one)
 │   ├── globals.css            # Tailwind v4 configuration + Neutral Slate & Blue theme vars

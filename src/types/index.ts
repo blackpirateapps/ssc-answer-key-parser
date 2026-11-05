@@ -85,3 +85,22 @@ export interface ScoreCardResponse {
   questions?: QuestionDetail[];
   error?: string;
 }
+
+export interface ExamShiftSummary {
+  id: number;
+  testDate: string;
+  shiftTime: string;
+  studentCount: number;
+  avgScore: number;
+  maxScore: number;
+}
+
+export interface ExaminationSummary {
+  id: number;
+  name: string;
+  studentCount: number;
+  avgScore: number;
+  maxScore: number;
+  shiftsCount?: number;
+  shifts?: ExamShiftSummary[];
+}

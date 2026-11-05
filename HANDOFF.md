@@ -32,6 +32,7 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 | **PDF Export (2 Modes)** | ✅ Complete | Download as PDF: (1) Correct Answers Only (Revision Sheet) and (2) Full Paper (All 4 Options & Answers). |
 | **High-Concurrency Caching** | ✅ Complete | In-memory LRU + Single-Flight deduplication + Pluggable Upstash Redis. |
 | **Modern Student UI** | ✅ Complete | Neutral Slate & Blue theme, Lucide icons, sans-serif typography, stacked visual bars, and 3-step guide. |
+| **Examinations & Shift Benchmarks** | ✅ Complete | Lists all exams with candidate counts, overall average score, highest score, and shift breakdown table. |
 | **Production Build** | ✅ Verified | Passes `npm run build` and `npx tsc --noEmit` cleanly. Tested on live sample. |
 
 ---
@@ -111,6 +112,12 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 ### G. Browser Extension Hydration Guard (`suppressHydrationWarning`)
 - Certain browser extensions (e.g. Internet Download Manager, color pickers, accessibility tools) inject random classes or attributes (e.g. `idc0_343`) onto the root `<html>` or `<body>` tag before React hydration occurs.
 - Both `<html lang="en" suppressHydrationWarning>` and `<body ... suppressHydrationWarning>` include `suppressHydrationWarning` in `src/app/layout.tsx` to prevent console hydration mismatch warnings.
+
+### H. Examinations Directory & Shift Aggregations (`/api/examinations`)
+1. **Aggregated Database Metrics:**
+   - Computes total candidate count (`COUNT(DISTINCT submissions.id)`), overall average score (`AVG(correct * 2.0 - wrong * 0.5)`), and highest score (`MAX(score)`) via Neon PostgreSQL SQL aggregations.
+2. **Interactive Shift Benchmarks:**
+   - Clicking any examination expands its shift-wise breakdown table with dates, shift timings, candidate counts, shift averages, and highest scores.
 
 ---
 
