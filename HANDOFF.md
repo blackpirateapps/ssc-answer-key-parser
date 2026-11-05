@@ -108,6 +108,12 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 
 ---
 
+### G. Browser Extension Hydration Guard (`suppressHydrationWarning`)
+- Certain browser extensions (e.g. Internet Download Manager, color pickers, accessibility tools) inject random classes or attributes (e.g. `idc0_343`) onto the root `<html>` or `<body>` tag before React hydration occurs.
+- Both `<html lang="en" suppressHydrationWarning>` and `<body ... suppressHydrationWarning>` include `suppressHydrationWarning` in `src/app/layout.tsx` to prevent console hydration mismatch warnings.
+
+---
+
 ## 5. Environment Variables
 
 | Variable | Required | Description |
