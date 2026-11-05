@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseSscAnswerKey } from "@/lib/ssc-parser";
+import { normalizeAnswerKeyUrl, parseSscAnswerKey } from "@/lib/ssc-parser";
 import {
   extractEncKey,
   getCacheKey,
@@ -19,8 +19,24 @@ import {
   SCRAPER_CONCURRENCY_CAP,
   tickWorker,
 } from "@/lib/worker";
+import { ScoreCardResponse } from "@/types";
 
 export const maxDuration = 30; // 30s timeout on Vercel
+
+/**
+ * Checks if a stored scorecard has the Part A bug (0 attempted in Reasoning while other sections have attempts).
+ */
+function isCorruptedRecord(record: ScoreCardResponse | null | undefined): boolean {
+  if (!record || !record.sections || record.sections.length < 4) return false;
+  const partA = record.sections.find((s) => s.id === "A");
+  const totalAttempted = record.summary?.attempted ?? 0;
+  return Boolean(
+    partA &&
+      partA.attempted === 0 &&
+      partA.unattempted === 25 &&
+      totalAttempted > 0
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -107,12 +123,17 @@ async function handleCheck(
     );
   }
 
-  const encKey = extractEncKey(trimmed);
-  const cacheKey = getCacheKey(trimmed);
+  const cleanUrl = normalizeAnswerKeyUrl(trimmed);
+  const encKey = extractEncKey(cleanUrl);
+  const cacheKey = getCacheKey(cleanUrl);
 
   // 1. In-memory / Redis Cache check
   const cachedData = await getFromCache(cacheKey);
-  if (cachedData && (!cachedData.status || cachedData.status === "completed")) {
+  if (
+    cachedData &&
+    (!cachedData.status || cachedData.status === "completed") &&
+    !isCorruptedRecord(cachedData)
+  ) {
     return NextResponse.json(cachedData, {
       headers: {
         "X-Cache": "HIT",
@@ -125,7 +146,9 @@ async function handleCheck(
   const db = getDb();
   if (db) {
     const existing = await getSubmissionRecord(encKey);
-    if (existing && existing.status === "completed") {
+    const corrupted = isCorruptedRecord(existing);
+
+    if (existing && existing.status === "completed" && !corrupted) {
       await setInCache(cacheKey, existing);
       return NextResponse.json(existing, {
         headers: {
@@ -135,10 +158,10 @@ async function handleCheck(
       });
     }
 
-    // 3. SAVE ANSWER KEY URL FIRST! (Immediate intake write to Neon DB)
-    const enqueued = await enqueueSubmission(trimmed, encKey);
+    // 3. SAVE / UPDATE ANSWER KEY URL IN NEON DB (Force re-queue if existing was corrupted)
+    const enqueued = await enqueueSubmission(cleanUrl, encKey, corrupted);
     if (enqueued) {
-      if (enqueued.status === "completed") {
+      if (enqueued.status === "completed" && !corrupted) {
         const fullRecord = await getSubmissionRecord(encKey);
         if (fullRecord) return NextResponse.json(fullRecord);
       }
@@ -150,16 +173,16 @@ async function handleCheck(
       );
 
       if (claimed) {
-        // We secured a worker slot! Process and return completed record
+        // We secured a worker slot! Process and update database record
         try {
           const result = await processSubmission(
             claimed.id,
-            claimed.answerKeyUrl,
+            cleanUrl,
             claimed.encKey
           );
           return NextResponse.json(result, {
             headers: {
-              "X-Cache": "SCRAPED",
+              "X-Cache": corrupted ? "DB-UPDATED" : "SCRAPED",
               "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=43200",
             },
           });
@@ -198,9 +221,9 @@ async function handleCheck(
   try {
     const result = await singleFlight(cacheKey, async () => {
       const existing = await getFromCache(cacheKey);
-      if (existing) return existing;
+      if (existing && !isCorruptedRecord(existing)) return existing;
 
-      const parsedResult = await parseSscAnswerKey(trimmed);
+      const parsedResult = await parseSscAnswerKey(cleanUrl);
       await setInCache(cacheKey, parsedResult);
       return parsedResult;
     });
@@ -233,7 +256,7 @@ async function handleEncKeyPolling(encKey: string) {
 
   // 1. Fast cache check
   const cached = await getFromCache(cacheKey);
-  if (cached && cached.status === "completed") {
+  if (cached && cached.status === "completed" && !isCorruptedRecord(cached)) {
     return NextResponse.json(cached);
   }
 
@@ -246,7 +269,7 @@ async function handleEncKeyPolling(encKey: string) {
     );
   }
 
-  if (sub.status === "completed") {
+  if (sub.status === "completed" && !isCorruptedRecord(sub)) {
     await setInCache(cacheKey, sub);
     return NextResponse.json(sub);
   }

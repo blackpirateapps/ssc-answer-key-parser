@@ -101,6 +101,10 @@ AGENTS.md                      # Instructions, architectural patterns, and scrap
    - Always select innermost `<font>` matching `Q.No: <num>`, and call `.closest('table')`.
 6. **Dynamic Row Layouts:**
    - Parts A–C have a "Hindi version" button row at index 0; Part D does not. Never hardcode row indices `[3, 4, 5, 6]`. Locate rows dynamically by checking for `Q.No:` and `<img>`.
+7. **Multi-Part URL Variants (`ViewCandResponse[1-4].aspx`):**
+   - Candidates copying URLs from Parts B, C, or D paste `ViewCandResponse2.aspx`, `ViewCandResponse3.aspx`, or `ViewCandResponse4.aspx`.
+   - Always normalize to canonical `ViewCandResponse.aspx` via `normalizeAnswerKeyUrl`.
+   - Dynamically detect the initial section index (`detectSectionIndex`) and fetch the remaining 3 parts in parallel (including `P1` for Part A if the initial page was Part C).
 
 ---
 

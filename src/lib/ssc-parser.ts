@@ -69,16 +69,57 @@ interface AspNetFormData {
   cookies: string;
 }
 
+export function normalizeAnswerKeyUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    // Normalize ViewCandResponse2.aspx, ViewCandResponse3.aspx, etc. to canonical ViewCandResponse.aspx
+    parsed.pathname = parsed.pathname.replace(
+      /ViewCandResponse\d*\.aspx/i,
+      "ViewCandResponse.aspx"
+    );
+    return parsed.href;
+  } catch {
+    return rawUrl.trim();
+  }
+}
+
+const PART_BUTTONS = [
+  { id: "A", buttonId: "P1", buttonText: "Click Here for PART-A" },
+  { id: "B", buttonId: "P2", buttonText: "Click Here for PART-B" },
+  { id: "C", buttonId: "P3", buttonText: "Click Here for PART-C" },
+  { id: "D", buttonId: "P4", buttonText: "Click Here for PART-D" },
+];
+
+function detectSectionIndex($: cheerio.CheerioAPI): number {
+  let firstQ = 1;
+  let found = false;
+
+  $("font").each((_, el) => {
+    const m = $(el).text().match(/Q\.No:\s*(\d+)/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!found || n < firstQ) {
+        firstQ = n;
+        found = true;
+      }
+    }
+  });
+
+  if (firstQ >= 76) return 3; // Part D
+  if (firstQ >= 51) return 2; // Part C
+  if (firstQ >= 26) return 1; // Part B
+  return 0; // Part A
+}
+
 export async function parseSscAnswerKey(rawUrl: string): Promise<ScoreCardResponse> {
-  // 1. Validate & normalize URL
-  const parsedUrl = new URL(rawUrl.trim());
+  // 1. Validate & normalize URL to canonical ViewCandResponse.aspx
+  const cleanUrl = normalizeAnswerKeyUrl(rawUrl);
+  const parsedUrl = new URL(cleanUrl);
   if (!parsedUrl.hostname.includes("cbexams.com")) {
     throw new Error("Invalid URL: Expected an SSC cbexams response sheet URL.");
   }
 
-  const cleanUrl = parsedUrl.href;
-
-  // 2. Fetch Part A (Initial GET)
+  // 2. Initial GET
   const partARes = await fetch(cleanUrl, {
     headers: BROWSER_HEADERS,
     cache: "no-store",
@@ -122,15 +163,27 @@ export async function parseSscAnswerKey(rawUrl: string): Promise<ScoreCardRespon
   // 3. Extract Candidate Details from Part A
   const candidate = parseCandidateDetails($a);
 
-  // 4. Fetch Parts B, C, and D in parallel using Part A's ViewState
-  const [partBHtml, partCHtml, partDHtml] = await Promise.all([
-    fetchPart(cleanUrl, "P2", "Click Here for PART-B", formData),
-    fetchPart(cleanUrl, "P3", "Click Here for PART-C", formData),
-    fetchPart(cleanUrl, "P4", "Click Here for PART-D", formData),
-  ]);
+  // 4. Determine which section was loaded initially, and fetch remaining 3 in parallel
+  const initialPartIdx = detectSectionIndex($a);
+  const htmls: string[] = new Array(4);
+  htmls[initialPartIdx] = partAHtml;
 
-  // 5. Parse all questions section by section
-  const htmls = [partAHtml, partBHtml, partCHtml, partDHtml];
+  const partsToFetch: { idx: number; cfg: (typeof PART_BUTTONS)[0] }[] = [];
+  for (let i = 0; i < 4; i++) {
+    if (i !== initialPartIdx) {
+      partsToFetch.push({ idx: i, cfg: PART_BUTTONS[i] });
+    }
+  }
+
+  const fetchedResults = await Promise.all(
+    partsToFetch.map(({ cfg }) =>
+      fetchPart(cleanUrl, cfg.buttonId, cfg.buttonText, formData)
+    )
+  );
+
+  partsToFetch.forEach(({ idx }, i) => {
+    htmls[idx] = fetchedResults[i];
+  });
   const allQuestions: QuestionDetail[] = [];
   const sectionsSummary: SectionSummary[] = [];
 

@@ -120,19 +120,34 @@ export interface EnqueueResult {
  */
 export async function enqueueSubmission(
   rawUrl: string,
-  encKey: string
+  encKey: string,
+  forceRequeue = false
 ): Promise<EnqueueResult | null> {
   const sql = getDb();
   if (!sql) return null;
   await ensureSchema();
 
-  const rows = await sql`
-    INSERT INTO submissions (enc_key, answer_key_url, status)
-    VALUES (${encKey}, ${rawUrl}, 'pending')
-    ON CONFLICT (enc_key) DO UPDATE
-      SET updated_at = NOW()
-    RETURNING id, status, enc_key, (xmax = 0) AS is_new;
-  `;
+  let rows;
+  if (forceRequeue) {
+    rows = await sql`
+      INSERT INTO submissions (enc_key, answer_key_url, status)
+      VALUES (${encKey}, ${rawUrl}, 'pending')
+      ON CONFLICT (enc_key) DO UPDATE
+        SET answer_key_url = EXCLUDED.answer_key_url,
+            status = 'pending',
+            updated_at = NOW()
+      RETURNING id, status, enc_key, (xmax = 0) AS is_new;
+    `;
+  } else {
+    rows = await sql`
+      INSERT INTO submissions (enc_key, answer_key_url, status)
+      VALUES (${encKey}, ${rawUrl}, 'pending')
+      ON CONFLICT (enc_key) DO UPDATE
+        SET answer_key_url = EXCLUDED.answer_key_url,
+            updated_at = NOW()
+      RETURNING id, status, enc_key, (xmax = 0) AS is_new;
+    `;
+  }
 
   if (rows.length === 0) return null;
 

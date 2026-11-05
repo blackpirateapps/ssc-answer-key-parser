@@ -38,20 +38,17 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 
 ## 3. Verified Sample Data & Test Results
 
-* **Live Sample URL:**  
-  `https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd`
-* **Verified Extraction & Calculation:**
-  * **Candidate:** MONIDIP MANDAL (Roll: `426120054646`, Shift: `10:00 AM Shift-1`, Date: `05 Oct 2026`)
-  * **Attempted:** 83 / 100
-  * **Correct:** 64 (+128.00 marks)
-  * **Wrong:** 19 (-9.50 marks)
-  * **Unattempted:** 17 (0.00 marks)
-  * **Total Raw Score:** **118.50 / 200.00** (Accuracy: 77.11%)
-  * **Section Breakdown:**
-    * Part A (Reasoning): 22 Correct, 3 Wrong, 0 Left → **42.50 / 50**
-    * Part B (General Awareness): 14 Correct, 7 Wrong, 4 Left → **24.50 / 50**
-    * Part C (Quantitative Aptitude): 9 Correct, 3 Wrong, 13 Left → **16.50 / 50**
-    * Part D (English Comprehension): 19 Correct, 6 Wrong, 0 Left → **35.00 / 50**
+* **Verified Sample Data & Test Results:**
+  * **Sample 1 (MONIDIP MANDAL - Oct 5 Shift 1):**
+    * URL: `https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd`
+    * Roll: `426120054646`, Shift: `10:00 AM Shift-1`, Date: `05 Oct 2026`
+    * Attempted: 83 / 100, Correct: 64, Wrong: 19, Left: 17
+    * Total Score: **118.50 / 200.00** (Reasoning: 42.50, GA: 24.50, Quant: 16.50, English: 35.00)
+  * **Sample 2 (SUDIP MANDAL - Oct 10 Shift 2, ViewCandResponse3 URL):**
+    * URL: `https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct10/ViewCandResponse3.aspx?EncKey=XVnT858XvNTVw`
+    * Roll: `426120243491`, Shift: `01:30 PM Shift-2`, Date: `10 Oct 2026`
+    * Attempted: 83 / 100, Correct: 71, Wrong: 12, Left: 17
+    * Total Score: **136.00 / 200.00** (Reasoning: **41.00**, GA: 32.50, Quant: 25.00, English: 37.50)
 
 ---
 
@@ -97,6 +94,17 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 2. **Dual PDF Modes:**
    - **Mode 1 (Just Correct Answers):** Shows candidate metadata, summary scoreboard, and questions with **only** the official correct answer option highlighted in green. Distractor options are stripped to create an uncluttered, compact revision sheet.
    - **Mode 2 (All Options & Answers):** Complete question paper showing the full 4-option grid with correct answers badged in green and candidate choices highlighted.
+
+---
+
+### F. Multi-Part URL Variant Normalization & Dynamic Section Fetching
+1. **The Issue:**
+   - When candidates browse Part B, C, or D in cbexams, the portal changes the address bar URL to `ViewCandResponse2.aspx`, `ViewCandResponse3.aspx`, or `ViewCandResponse4.aspx`.
+   - An initial GET request to `ViewCandResponse3.aspx` returns Part C (Q.51–Q.75) instead of Part A. The scraper previously assumed the initial GET was always Part A, causing Part A (Reasoning) to evaluate to 0 attempted / 25 left.
+2. **The Fix:**
+   - Canonicalizes any `ViewCandResponse\d*\.aspx` to `ViewCandResponse.aspx` via `normalizeAnswerKeyUrl`.
+   - In `src/lib/ssc-parser.ts`, dynamically detects the initial page's section index (`detectSectionIndex`) by inspecting the question numbers, and fetches the remaining 3 sections in parallel (including `P1` for Part A if the initial page was Part C).
+   - In `src/app/api/check/route.ts`, auto-detects corrupted database records (`isCorruptedRecord`) and force-requeues them with the canonical URL so PostgreSQL (`submissions` and `report_cards`) and caches are updated with the corrected reasoning scores.
 
 ---
 
