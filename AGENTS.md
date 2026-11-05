@@ -10,6 +10,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # AI Agent Instructions for `ssc-answer-key-parser`
 
+> [!IMPORTANT]
+> **GOLDEN RULE FOR ALL AGENTS: ALWAYS UPDATE `HANDOFF.MD` AND `AGENTS.MD`**
+> Every AI agent working on this repository **MUST** update `HANDOFF.md` and (if rules changed) `AGENTS.md` before completing any user request or creating a git commit.
+> Document:
+> 1. Exact changes made in the session.
+> 2. Current working status and test results.
+> 3. Any new gotchas, environment variables, or learnings.
+> 4. Next immediate recommended steps.
+> 5. **Always commit and push** your work to `origin/main` before finishing your response.
+
+---
+
 ## 1. Project Purpose
 This repository provides a lightweight, ultra-fast, Hacker News-themed web application to parse SSC CGL response sheet URLs (hosted on `sscexams.cbexams.com`) and display accurate scores and section-wise breakdowns. It is designed to run on Vercel Serverless Functions and absorb extreme traffic spikes (10k+ concurrent requests).
 
@@ -31,6 +43,9 @@ src/
 │   └── ssc-parser.ts          # Core Cheerio scraping & ASP.NET WebForms postback engine
 └── types/
     └── index.ts               # Strongly typed data models (Candidate, Question, Summary)
+vercel.json                    # Deploys functions to Mumbai ("bom1") to bypass India geo-blocks
+HANDOFF.md                     # Comprehensive project status, test logs, and next milestones
+AGENTS.md                      # Instructions, architectural patterns, and scraping rules for agents
 ```
 
 ---
@@ -39,17 +54,21 @@ src/
 
 When modifying or expanding `src/lib/ssc-parser.ts`, follow these verified rules:
 
-1. **Do NOT submit `ddltest` in POST bodies:**
+1. **Deploy to Mumbai, India (`bom1`):**
+   - `cbexams.com` is protected by Cloudflare with **strict Geo-blocking for non-Indian IPs**.
+   - Serverless functions must run in Mumbai (`vercel.json` -> `"regions": ["bom1"]`).
+   - If AWS datacenters get blocked during high-traffic exam days, use the built-in `PROXY_URL` environment variable (via `undici.ProxyAgent`).
+2. **Do NOT submit `ddltest` in POST bodies:**
    - The dropdown `<select id="ddltest">` is disabled in HTML. If included in POST data, ASP.NET throws `System.ArgumentException: Invalid postback or callback argument`.
-2. **Fetch Parts B, C, D in Parallel:**
+3. **Fetch Parts B, C, D in Parallel:**
    - All three parts use the ViewState, ViewStateGenerator, and EventValidation extracted from Part A. They run concurrently via `Promise.all`.
-3. **Session Cookies:**
+4. **Session Cookies:**
    - Always extract and pass the `ASP.NET_SessionId` cookie from Part A into subsequent requests.
-4. **Target Specific `<font>` Tags for Question Tables:**
+5. **Target Specific `<font>` Tags for Question Tables:**
    - Never use `closest('table')` on generic wrapper `td` tags. Always filter `<font>` tags matching `Q.No: <num>`, and call `.closest('table')` on that element.
-5. **Dynamic Row Layouts:**
+6. **Dynamic Row Layouts:**
    - Part A, B, and C have a "Hindi version" button row at index 0. Part D (English) does not. Never hardcode row indices `[3, 4, 5, 6]`. Locate the question row by looking for text containing `Q.No:`, and find the 4 option rows by locating `<img>` tags.
-6. **Color Semantics:**
+7. **Color Semantics:**
    - `bgcolor="green"` → Correctly chosen by candidate (+2.00).
    - `bgcolor="red"` → Chosen option is wrong (-0.50).
    - `bgcolor="yellow"` → Official correct answer.
@@ -85,5 +104,6 @@ Always run the following commands before completing any task:
 3. Test with the live verified URL:
    `https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd`
    (Expected: Score 118.50, Correct 64, Wrong 19, Left 17).
-4. Update `HANDOFF.md` and `AGENTS.md` whenever core architecture changes.
-5. Commit and push to `origin/main`.
+4. **Update `HANDOFF.md` with session summary and current state.**
+5. Update `AGENTS.md` if any rules or architectural patterns evolved.
+6. Commit and push to `origin/main`.
