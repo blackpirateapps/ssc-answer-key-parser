@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SSC CGL Answer Key & Score Calculator (HN Edition)",
+  title: "SSC CGL Answer Key & Score Calculator",
   description:
-    "Instant, minimal, and high-performance SSC CGL score calculator and answer key analyzer.",
+    "Instant, accurate, and easy-to-use SSC CGL score calculator, section-wise analysis, and answer key analyzer.",
 };
 
 export default function RootLayout({
@@ -13,8 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col">{children}</body>
+    <html lang="en" className="bg-slate-50 text-slate-900 antialiased">
+      <body className="min-h-screen flex flex-col selection:bg-blue-100 selection:text-blue-900">
+        {children}
+      </body>
     </html>
   );
 }

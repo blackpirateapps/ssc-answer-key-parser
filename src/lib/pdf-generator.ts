@@ -65,12 +65,13 @@ export function downloadQuestionsPdf(
       padding: 0;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #111;
-      background: #fdfdfc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0f172a;
+      background: #f8fafc;
       font-size: 12px;
-      line-height: 1.4;
-      padding: 15px;
+      line-height: 1.45;
+      padding: 16px;
+      font-variant-numeric: tabular-nums;
     }
     
     /* Sticky Screen Action Bar (Hidden in Print) */
@@ -78,55 +79,64 @@ export function downloadQuestionsPdf(
       position: sticky;
       top: 0;
       z-index: 9999;
-      background: #ff6600;
-      color: #000;
-      padding: 10px 16px;
-      margin: -15px -15px 15px -15px;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 18px;
+      margin: -16px -16px 16px -16px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      border-bottom: 2px solid #d85800;
-      font-family: monospace;
+      border-bottom: 1px solid #334155;
     }
     .action-btn {
-      background: #000;
-      color: #fff;
+      background: #2563eb;
+      color: #ffffff;
       border: none;
-      padding: 6px 14px;
-      font-weight: bold;
+      padding: 7px 16px;
+      font-weight: 600;
       font-size: 12px;
       cursor: pointer;
-      border-radius: 2px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .action-btn:hover {
-      background: #222;
+      background: #1d4ed8;
     }
     .action-close-btn {
-      background: #fff;
-      color: #000;
-      border: 1px solid #333;
-      padding: 5px 10px;
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      padding: 6px 12px;
       font-size: 11px;
+      border-radius: 6px;
       cursor: pointer;
+    }
+    .action-close-btn:hover {
+      background: #334155;
+      color: #fff;
     }
 
     /* Print Header & Candidate Info */
     .exam-header {
-      border-bottom: 2px solid #333;
+      border-bottom: 2px solid #0f172a;
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
     .exam-title {
-      font-size: 15px;
-      font-weight: bold;
+      font-size: 16px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: #0f172a;
     }
     .exam-subtitle {
       font-size: 12px;
-      color: #555;
+      color: #64748b;
+      margin-top: 2px;
     }
     
     .meta-table, .score-table {
@@ -136,40 +146,43 @@ export function downloadQuestionsPdf(
       font-size: 11px;
     }
     .meta-table td, .score-table th, .score-table td {
-      border: 1px solid #ccc;
-      padding: 5px 8px;
+      border: 1px solid #e2e8f0;
+      padding: 6px 10px;
     }
     .score-table th {
-      background: #f0f0eb;
+      background: #f1f5f9;
       font-weight: 600;
       text-align: left;
+      color: #475569;
     }
 
     /* Score Grand Box */
     .summary-box {
-      background: #fafaf6;
-      border: 1px solid #ccc;
-      padding: 8px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
       margin-bottom: 14px;
       display: flex;
       justify-content: space-around;
       text-align: center;
-      font-family: monospace;
       font-size: 11px;
     }
     .summary-item .num {
-      font-size: 14px;
-      font-weight: bold;
-      color: #000;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 2px;
     }
 
     /* Section Divider */
     .section-banner {
-      background: #e4e4dd;
-      border-left: 4px solid #ff6600;
-      padding: 6px 10px;
-      font-weight: bold;
+      background: #f1f5f9;
+      border-left: 4px solid #2563eb;
+      padding: 6px 12px;
+      font-weight: 700;
       font-size: 12px;
+      color: #0f172a;
       margin: 16px 0 10px 0;
       page-break-after: avoid;
       break-after: avoid;
@@ -177,9 +190,10 @@ export function downloadQuestionsPdf(
 
     /* Question Cards */
     .question-card {
-      border: 1px solid #d4d4cb;
-      background: #fff;
-      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 10px 12px;
       margin-bottom: 10px;
       page-break-inside: avoid;
       break-inside: avoid;
@@ -188,32 +202,32 @@ export function downloadQuestionsPdf(
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 4px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 5px;
       margin-bottom: 6px;
       font-size: 11px;
-      font-family: monospace;
     }
     .status-badge {
-      font-weight: bold;
-      padding: 2px 6px;
+      font-weight: 600;
+      padding: 2px 8px;
       font-size: 10px;
+      border-radius: 4px;
       border: 1px solid transparent;
     }
     .status-correct {
-      background: #e8f5e9;
-      color: #2e7d32;
-      border-color: #a5d6a7;
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
     }
     .status-wrong {
-      background: #ffebee;
-      color: #c62828;
-      border-color: #ffcdd2;
+      background: #fff1f2;
+      color: #9f1239;
+      border-color: #fecdd3;
     }
     .status-left {
-      background: #f5f5f5;
-      color: #616161;
-      border-color: #e0e0e0;
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #e2e8f0;
     }
 
     .q-img-wrap {
@@ -229,17 +243,17 @@ export function downloadQuestionsPdf(
 
     /* Mode: Correct Only Box */
     .correct-only-box {
-      background: #f0fff4;
-      border: 1.5px solid #38a169;
-      padding: 6px 10px;
+      background: #ecfdf5;
+      border: 1.5px solid #10b981;
+      border-radius: 6px;
+      padding: 8px 12px;
       margin-top: 6px;
     }
     .correct-only-label {
-      font-weight: bold;
-      color: #22543d;
+      font-weight: 600;
+      color: #065f46;
       font-size: 11px;
       margin-bottom: 4px;
-      font-family: monospace;
     }
     .correct-only-box img {
       max-height: 70px;
@@ -260,24 +274,24 @@ export function downloadQuestionsPdf(
       }
     }
     .opt-box {
-      border: 1px solid #ddd;
-      padding: 5px 8px;
-      background: #fafaf8;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      background: #f8fafc;
       font-size: 10.5px;
     }
     .opt-box.opt-correct {
-      border: 1.5px solid #38a169;
-      background: #f0fff4;
+      border: 1.5px solid #10b981;
+      background: #ecfdf5;
     }
     .opt-box.opt-chosen-wrong {
-      border: 1.5px solid #e53e3e;
-      background: #fff5f5;
+      border: 1.5px solid #f43f5e;
+      background: #fff1f2;
     }
     .opt-header {
       display: flex;
       justify-content: space-between;
       margin-bottom: 3px;
-      font-family: monospace;
       font-size: 10px;
     }
     .opt-box img {
@@ -290,7 +304,7 @@ export function downloadQuestionsPdf(
     @media print {
       body {
         padding: 0;
-        background: #fff;
+        background: #ffffff;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -304,7 +318,7 @@ export function downloadQuestionsPdf(
       .question-card {
         page-break-inside: avoid;
         break-inside: avoid;
-        border: 1px solid #ccc;
+        border: 1px solid #cbd5e1;
       }
       .section-banner {
         page-break-before: auto;
@@ -316,12 +330,12 @@ export function downloadQuestionsPdf(
 <body>
   <!-- Action Bar on Screen -->
   <div class="screen-action-bar">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <button class="action-btn" onclick="window.print()">🖨️ Save as PDF / Print</button>
-      <span style="font-size: 11px;">${modeTitle}</span>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button class="action-btn" onclick="window.print()">Print / Save as PDF</button>
+      <span style="font-size: 11px; color: #94a3b8;">${modeTitle}</span>
     </div>
     <div style="display: flex; align-items: center; gap: 10px;">
-      <span id="loading-status" style="font-size: 11px; color: #111;">Loading images...</span>
+      <span id="loading-status" style="font-size: 11px; color: #cbd5e1;">Loading images...</span>
       <button class="action-close-btn" onclick="window.close()">Close</button>
     </div>
   </div>
@@ -340,7 +354,7 @@ export function downloadQuestionsPdf(
     </tr>
     <tr>
       <td><strong>Test Date:</strong> ${candidate?.testDate || "N/A"}</td>
-      <td><strong>Shift & Time:</strong> ${candidate?.shift || "N/A"}</td>
+      <td><strong>Shift &amp; Time:</strong> ${candidate?.shift || "N/A"}</td>
     </tr>
     <tr>
       <td colspan="2"><strong>Test Centre:</strong> ${candidate?.centre || "N/A"}</td>
@@ -350,27 +364,27 @@ export function downloadQuestionsPdf(
   <!-- Score Summary -->
   <div class="summary-box">
     <div class="summary-item">
-      <div>Total Raw Score</div>
-      <div class="num" style="color: #d85800;">${summary?.totalMarks.toFixed(2) || "0.00"} / ${summary?.maxMarks || 200}</div>
+      <div style="color: #64748b;">Total Score</div>
+      <div class="num" style="color: #2563eb;">${summary?.totalMarks.toFixed(2) || "0.00"} / ${summary?.maxMarks || 200}</div>
     </div>
     <div class="summary-item">
-      <div>Attempted</div>
+      <div style="color: #64748b;">Attempted</div>
       <div class="num">${summary?.attempted || 0} / ${summary?.totalQuestions || 100}</div>
     </div>
     <div class="summary-item">
-      <div>Correct (+2)</div>
-      <div class="num" style="color: #2e7d32;">${summary?.correct || 0}</div>
+      <div style="color: #64748b;">Correct (+2)</div>
+      <div class="num" style="color: #059669;">${summary?.correct || 0}</div>
     </div>
     <div class="summary-item">
-      <div>Wrong (-0.5)</div>
-      <div class="num" style="color: #c62828;">${summary?.wrong || 0}</div>
+      <div style="color: #64748b;">Wrong (-0.5)</div>
+      <div class="num" style="color: #e11d48;">${summary?.wrong || 0}</div>
     </div>
     <div class="summary-item">
-      <div>Left (0)</div>
-      <div class="num" style="color: #616161;">${summary?.unattempted || 0}</div>
+      <div style="color: #64748b;">Left (0)</div>
+      <div class="num" style="color: #64748b;">${summary?.unattempted || 0}</div>
     </div>
     <div class="summary-item">
-      <div>Accuracy</div>
+      <div style="color: #64748b;">Accuracy</div>
       <div class="num">${summary?.accuracy || 0}%</div>
     </div>
   </div>
@@ -381,8 +395,8 @@ export function downloadQuestionsPdf(
       <tr>
         <th>Section</th>
         <th style="text-align: center;">Attempted</th>
-        <th style="text-align: center; color: #2e7d32;">Correct</th>
-        <th style="text-align: center; color: #c62828;">Wrong</th>
+        <th style="text-align: center; color: #059669;">Correct</th>
+        <th style="text-align: center; color: #e11d48;">Wrong</th>
         <th style="text-align: center;">Left</th>
         <th style="text-align: right;">Score</th>
       </tr>
@@ -394,10 +408,10 @@ export function downloadQuestionsPdf(
         <tr>
           <td>Part ${sec.id}: ${sec.name} (${sec.qRange})</td>
           <td style="text-align: center;">${sec.attempted}</td>
-          <td style="text-align: center; font-weight: bold; color: #2e7d32;">${sec.correct}</td>
-          <td style="text-align: center; font-weight: bold; color: #c62828;">${sec.wrong}</td>
-          <td style="text-align: center;">${sec.unattempted}</td>
-          <td style="text-align: right; font-weight: bold;">${sec.sectionMarks.toFixed(2)} / ${sec.maxMarks}</td>
+          <td style="text-align: center; font-weight: 600; color: #059669;">${sec.correct}</td>
+          <td style="text-align: center; font-weight: 600; color: #e11d48;">${sec.wrong}</td>
+          <td style="text-align: center; color: #64748b;">${sec.unattempted}</td>
+          <td style="text-align: right; font-weight: 700;">${sec.sectionMarks.toFixed(2)} / ${sec.maxMarks}</td>
         </tr>
       `
         )
@@ -427,10 +441,10 @@ export function downloadQuestionsPdf(
 
             const statusText =
               q.status === "correct"
-                ? "✓ CORRECT (+2.00)"
+                ? "Correct (+2.00)"
                 : q.status === "wrong"
-                ? `✗ WRONG (-0.50)`
-                : "— UNATTEMPTED (0.00)";
+                ? "Wrong (-0.50)"
+                : "Unattempted (0.00)";
 
             let answersHtml = "";
 
@@ -441,7 +455,7 @@ export function downloadQuestionsPdf(
 
               answersHtml = `
                 <div class="correct-only-box">
-                  <div class="correct-only-label">✓ Official Correct Answer: Option ${
+                  <div class="correct-only-label">Official Correct Answer: Option ${
                     correctOpt?.optionNumber || q.correctOption || "N/A"
                   } ${
                 q.chosenOption
@@ -469,16 +483,16 @@ export function downloadQuestionsPdf(
                       if (opt.isCorrect) {
                         optClass += " opt-correct";
                         badge +=
-                          '<span style="color:#22543d; font-weight:bold;">[✓ Correct Answer]</span> ';
+                          '<span style="color:#065f46; font-weight:600;">[Official Correct Answer]</span> ';
                       }
                       if (opt.isChosen) {
                         if (opt.isCorrect) {
                           badge +=
-                            '<span style="color:#22543d; font-weight:bold;">[You Chose]</span>';
+                            '<span style="color:#065f46; font-weight:600;">[Your Choice]</span>';
                         } else {
                           optClass += " opt-chosen-wrong";
                           badge +=
-                            '<span style="color:#9b2c2c; font-weight:bold;">[You Chose - Wrong]</span>';
+                            '<span style="color:#9f1239; font-weight:600;">[Your Choice - Wrong]</span>';
                         }
                       }
 

@@ -9,9 +9,9 @@
 
 ## 1. Executive Summary
 
-This project is a high-performance, minimalist (Hacker News-themed) web application that parses candidate response sheets from Staff Selection Commission (SSC) exams (specifically SSC CGL on `sscexams.cbexams.com`), persists raw submissions into Neon PostgreSQL, and calculates scores (+2 for correct, -0.5 for wrong) directly in the browser.
+This project is a high-performance, student-friendly web application that parses candidate response sheets from Staff Selection Commission (SSC) exams (specifically SSC CGL on `sscexams.cbexams.com`), persists raw submissions into Neon PostgreSQL, and calculates scores (+2 for correct, -0.5 for wrong) directly in the browser.
 
-It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** during answer key releases without crashing Vercel functions, running out of database connections, or getting blocked by `cbexams.com`.
+It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** during answer key releases without crashing Vercel functions, running out of database connections, or getting blocked by `cbexams.com`. It features a polished, accessible design (Neutral Slate / Minimalist Monochrome with Blue accents) built with modern sans-serif typography, Lucide vector icons, interactive visual progress bars, and zero monospace terminal aesthetics.
 
 ---
 
@@ -31,7 +31,7 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 | **Roll Number Deduplication** | ✅ Complete | Detects duplicate roll numbers across different URLs and displays "This roll number is already saved, showing saved results." |
 | **PDF Export (2 Modes)** | ✅ Complete | Download as PDF: (1) Correct Answers Only (Revision Sheet) and (2) Full Paper (All 4 Options & Answers). |
 | **High-Concurrency Caching** | ✅ Complete | In-memory LRU + Single-Flight deduplication + Pluggable Upstash Redis. |
-| **Hacker News UI** | ✅ Complete | Beige `#f6f6ef` & orange `#ff6600` theme; filterable question cards + compact table view. |
+| **Modern Student UI** | ✅ Complete | Neutral Slate & Blue theme, Lucide icons, sans-serif typography, stacked visual bars, and 3-step guide. |
 | **Production Build** | ✅ Verified | Passes `npm run build` and `npx tsc --noEmit` cleanly. Tested on live sample. |
 
 ---

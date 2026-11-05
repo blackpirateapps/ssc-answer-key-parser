@@ -3,7 +3,54 @@
 import { useEffect, useRef, useState } from "react";
 import { ScoreCardResponse, QuestionStatus, RawSectionReport } from "@/types";
 import { calculateClientScores } from "@/lib/scoring";
-import { downloadQuestionsPdf, PdfMode } from "@/lib/pdf-generator";
+import { downloadQuestionsPdf } from "@/lib/pdf-generator";
+import {
+  GraduationCap,
+  Link2,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
+  Clock,
+  Calendar,
+  MapPin,
+  Building2,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Share2,
+  Check,
+  FileText,
+  Layers,
+  Sparkles,
+  HelpCircle,
+  AlertCircle,
+  ArrowRight,
+  LayoutGrid,
+  List,
+  Info,
+  Loader2,
+  Target,
+  FileCheck2,
+  X,
+  ExternalLink,
+} from "lucide-react";
+
+function GithubIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
 
 const DEMO_URL =
   "https://sscexams.cbexams.com/CGLE2026jsdgheQchallengemshetsOct5/ViewCandResponse.aspx?EncKey=tgci650tgcimd";
@@ -17,6 +64,7 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [copied, setCopied] = useState(false);
   const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [queueState, setQueueState] = useState<{
     status: string;
     queuePosition?: number;
@@ -155,7 +203,7 @@ export default function Home() {
           queuePosition: data.queuePosition,
           message:
             data.message ||
-            "URL saved! Processing answer keys one by one...",
+            "URL saved securely. Processing answer keys one by one...",
           encKey: data.encKey,
         });
 
@@ -199,183 +247,299 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f6f6ef] text-[#222222] font-sans flex flex-col justify-between">
-      {/* Top Hacker News Style Bar */}
-      <header className="bg-[#ff6600] px-3 py-1.5 flex items-center justify-between border-b border-[#d85800]">
-        <div className="flex items-center space-x-2">
-          <span className="bg-white text-[#ff6600] font-bold text-xs px-1.5 py-0.5 border border-black font-mono">
-            Y
-          </span>
-          <span className="font-bold text-sm tracking-tight text-black">
-            SSC CGL Score Calculator
-          </span>
-          <span className="hidden sm:inline text-xs text-black/75">
-            | minimal &middot; high-concurrency &middot; instant
-          </span>
-        </div>
-        <div className="text-xs text-black flex items-center space-x-3">
-          <a
-            href="https://github.com/blackpirateapps/ssc-answer-key-parser"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline font-mono"
-          >
-            github
-          </a>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-blue-100 selection:text-blue-900">
+      {/* Modern Clean Header Navbar */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-base tracking-tight text-slate-900">
+                  SSC Scorecard
+                </span>
+                <span className="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-blue-200/60">
+                  CGL Tier-1
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                Answer Key Analyzer &amp; Score Calculator
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setUrl(DEMO_URL);
+                handleCalculate(DEMO_URL);
+              }}
+              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <span>Sample Sheet</span>
+            </button>
+            <a
+              href="https://github.com/blackpirateapps/ssc-answer-key-parser"
+              target="_blank"
+              rel="noreferrer"
+              className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+              title="View on GitHub"
+            >
+              <GithubIcon className="w-4 h-4" />
+            </a>
+          </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-4xl w-full mx-auto p-3 sm:p-4 flex-grow">
-        {/* Input Card */}
-        <section className="bg-white border border-[#e2e2d5] p-3 sm:p-4 mb-4 shadow-xs">
-          <h1 className="text-base font-bold mb-1">Enter Answer Key URL</h1>
-          <p className="text-xs text-gray-600 mb-3">
-            Paste the response sheet URL from <code>sscexams.cbexams.com</code>. Designed to absorb 10k-100k spikes with PostgreSQL queueing.
-          </p>
+      <main className="max-w-5xl w-full mx-auto p-4 sm:p-6 flex-grow space-y-6">
+        {/* Intake Hero Card */}
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-7">
+          <div className="max-w-2xl">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Check Your SSC CGL Score Instantly
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Paste your official cbexams response sheet link to view your marks, section breakdown, accuracy, and download your paper.
+            </p>
+          </div>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleCalculate();
             }}
-            className="space-y-2"
+            className="mt-5 space-y-3"
           >
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://sscexams.cbexams.com/CGLE.../ViewCandResponse.aspx?EncKey=..."
-                required
-                className="flex-grow px-2.5 py-1.5 text-xs sm:text-sm border border-gray-400 bg-[#fafaf7] focus:bg-white focus:outline-hidden focus:border-[#ff6600] font-mono"
-              />
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-grow">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Link2 className="w-4 h-4" />
+                </div>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://sscexams.cbexams.com/CGLE.../ViewCandResponse.aspx?EncKey=..."
+                  required
+                  className="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                />
+                {url && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUrl("");
+                      setResult(null);
+                      setError(null);
+                      setQueueState(null);
+                    }}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title="Clear input"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#ff6600] text-black font-semibold px-4 py-1.5 text-xs sm:text-sm hover:bg-[#e65c00] active:bg-[#cc5200] disabled:opacity-50 cursor-pointer border border-[#d85800]"
+                className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-xs shrink-0"
               >
-                {loading ? "Calculating..." : "Calculate Score"}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Calculating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Calculate Score</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-xs pt-1">
+            {/* Quick helper toggles */}
+            <div className="flex flex-wrap items-center justify-between text-xs pt-1 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowGuide(!showGuide)}
+                className="text-slate-500 hover:text-blue-600 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                <span>How to find your response sheet link?</span>
+                {showGuide ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   setUrl(DEMO_URL);
                   handleCalculate(DEMO_URL);
                 }}
-                className="text-[#828282] hover:text-black underline cursor-pointer"
+                className="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
               >
-                Load sample answer key URL
+                Try sample answer key URL
               </button>
-              {url && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUrl("");
-                    setResult(null);
-                    setError(null);
-                    setQueueState(null);
-                  }}
-                  className="text-gray-500 hover:text-red-700"
-                >
-                  Clear
-                </button>
-              )}
             </div>
+
+            {/* 3-Step Guide for Normies */}
+            {showGuide && (
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs text-slate-600 space-y-2 mt-3 animate-in fade-in duration-200">
+                <div className="font-semibold text-slate-800 text-sm mb-1">
+                  How to get your answer key URL in 3 simple steps:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white p-3 rounded-lg border border-slate-200/80">
+                    <span className="inline-block w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-center leading-5 text-[11px] mb-1.5">
+                      1
+                    </span>
+                    <div className="font-medium text-slate-800">Login to SSC</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">
+                      Visit the official SSC candidate challenge portal using your credentials.
+                    </div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200/80">
+                    <span className="inline-block w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-center leading-5 text-[11px] mb-1.5">
+                      2
+                    </span>
+                    <div className="font-medium text-slate-800">Open Response Sheet</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">
+                      Click &ldquo;View Response Sheet&rdquo; or &ldquo;Challenge Sheet&rdquo; to view your paper.
+                    </div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200/80">
+                    <span className="inline-block w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold text-center leading-5 text-[11px] mb-1.5">
+                      3
+                    </span>
+                    <div className="font-medium text-slate-800">Copy &amp; Paste URL</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">
+                      Copy the full address from your browser bar (containing <code>EncKey</code>) and paste here.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </form>
 
           {/* Error Message */}
           {error && (
-            <div className="mt-3 p-2 bg-[#ffebee] border border-[#ffcdd2] text-[#c62828] text-xs">
-              <strong>Error:</strong> {error}
+            <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold">Unable to process sheet:</span>{" "}
+                {error}
+              </div>
             </div>
           )}
         </section>
 
         {/* Queue Progress Indicator */}
         {queueState && (
-          <div className="bg-[#fffdf2] border border-[#ffe082] p-3 text-xs font-mono mb-4 text-[#856404]">
-            <div className="flex items-center justify-between border-b border-[#ffe082]/60 pb-1.5 mb-2">
-              <div className="flex items-center space-x-2 font-bold">
-                <span className="text-sm">⏳</span>
-                <span>ANSWER KEY SAVED &amp; QUEUED</span>
+          <div className="bg-white rounded-2xl border border-blue-200 p-5 shadow-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <div className="flex items-center space-x-2.5">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <span className="font-semibold text-sm text-slate-900">
+                  Response Sheet Queued for Evaluation
+                </span>
               </div>
               {queueState.queuePosition !== undefined && (
-                <span className="bg-[#ffe082] text-black text-[10px] font-bold px-2 py-0.5">
+                <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-200">
                   Position #{queueState.queuePosition} in line
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-700 mb-1">
+            <p className="text-xs text-slate-600 mb-2">
               {queueState.message ||
-                "Your URL has been saved in Postgres. Processing responses one by one..."}
+                "Your URL has been saved securely. Processing submissions one by one to ensure zero errors..."}
             </p>
-            <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
               <span>Automatic real-time polling active...</span>
-              <span className="text-[10px] text-gray-400">Do not refresh</span>
+              <span className="text-slate-400">Please keep this page open</span>
             </div>
           </div>
         )}
 
-        {/* Loading Spinner / State */}
+        {/* Loading State */}
         {loading && !queueState && (
-          <div className="text-center py-10 text-xs text-gray-600 font-mono">
-            Fetching Part A, B, C, D in parallel &middot; Parsing answers &amp; question images...
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+            <p className="text-sm font-medium text-slate-800">
+              Fetching response sections &amp; computing scores...
+            </p>
+            <p className="text-xs text-slate-500">
+              Retrieving Reasoning, General Awareness, Quant, and English Comprehension.
+            </p>
           </div>
         )}
 
         {/* Result Score Card */}
         {result && result.candidate && result.summary && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Roll Number Duplication Notice */}
             {result.alreadySavedByRollNo && (
-              <div className="bg-[#e8f4fd] border border-[#b6d4fe] p-3 text-xs font-mono text-[#084298] flex items-center justify-between shadow-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-900 flex items-center justify-between shadow-xs">
                 <div className="flex items-center space-x-2">
-                  <span className="font-bold text-sm">ℹ️</span>
+                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>
                     {result.duplicateNotice ||
-                      `This roll number (${result.candidate.rollNo}) is already saved, showing saved results.`}
+                      `This roll number (${result.candidate.rollNo}) is already saved. Displaying saved results.`}
                   </span>
                 </div>
-                <span className="bg-[#cfe2ff] text-[#084298] text-[10px] px-2 py-0.5 border border-[#b6d4fe] font-bold">
-                  DUPLICATE ROLL NO
+                <span className="bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded-md font-semibold shrink-0">
+                  Already Saved
                 </span>
               </div>
             )}
 
             {/* Candidate & Metadata Header */}
-            <div className="bg-white border border-[#e2e2d5] p-3 text-xs">
-              <div className="flex flex-wrap items-center justify-between border-b border-gray-200 pb-2 mb-2 gap-2">
-                <div className="flex items-center flex-wrap gap-1">
-                  <span className="font-bold text-sm text-black">
-                    {result.candidate.name}
-                  </span>
-                  <span className="text-gray-500">
-                    (Roll: {result.candidate.rollNo})
-                  </span>
-                  {result.alreadySavedByRollNo && (
-                    <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-1.5 py-0.5 border border-blue-300 ml-1">
-                      Already Saved
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
+                <div>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                      {result.candidate.name}
+                    </h2>
+                    <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded-md">
+                      Roll: {result.candidate.rollNo}
                     </span>
-                  )}
+                    {result.alreadySavedByRollNo && (
+                      <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-md border border-blue-200">
+                        Saved Candidate
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {result.candidate.examLevel}
+                  </p>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#f0f0eb] text-gray-700 text-[10px] font-mono px-1.5 py-0.5 border border-gray-300">
-                    Browser Calculated
-                  </span>
-                  {result.cached && (
-                    <span className="bg-green-100 text-green-800 text-[10px] font-mono px-1.5 py-0.5 border border-green-300">
-                      ⚡ CACHED
-                    </span>
-                  )}
                   <button
                     onClick={copyShareLink}
-                    className="text-xs bg-[#f0f0eb] border border-gray-300 hover:bg-gray-200 px-2 py-0.5 cursor-pointer"
+                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    {copied ? "Link Copied!" : "Share Link"}
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700 font-semibold">Link Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Share Result</span>
+                      </>
+                    )}
                   </button>
 
                   {/* PDF Download Dropdown */}
@@ -383,28 +547,32 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setPdfMenuOpen(!pdfMenuOpen)}
-                      className="text-xs bg-[#ff6600] text-black font-semibold border border-[#d85800] hover:bg-[#e65c00] active:bg-[#cc5200] px-2.5 py-0.5 cursor-pointer flex items-center gap-1"
+                      className="text-xs bg-slate-900 hover:bg-slate-800 text-white font-medium px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
-                      <span>📥 Download PDF</span>
-                      <span className="text-[9px]">▼</span>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download PDF</span>
+                      <ChevronDown className="w-3 h-3 text-slate-300" />
                     </button>
 
                     {pdfMenuOpen && (
-                      <div className="absolute right-0 mt-1 w-64 bg-white border border-gray-400 shadow-md z-50 text-xs font-mono">
+                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-slate-200 shadow-lg z-50 p-1.5 animate-in fade-in duration-150">
                         <button
                           type="button"
                           onClick={() => {
                             setPdfMenuOpen(false);
                             downloadQuestionsPdf(result, "correct_only");
                           }}
-                          className="w-full text-left p-2.5 hover:bg-[#fff9e6] border-b border-gray-200 flex flex-col cursor-pointer"
+                          className="w-full text-left p-2.5 hover:bg-slate-50 rounded-lg flex items-start gap-2.5 cursor-pointer transition-colors"
                         >
-                          <span className="font-bold text-black flex items-center gap-1.5">
-                            <span>📄</span> PDF: Just Correct Answers
-                          </span>
-                          <span className="text-[10px] text-gray-500 mt-0.5">
-                            Clean revision sheet showing only the correct answers
-                          </span>
+                          <FileText className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-semibold text-slate-900 text-xs">
+                              Answers Only (Revision Sheet)
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              Clean review sheet showing only the official correct answer for each question.
+                            </div>
+                          </div>
                         </button>
                         <button
                           type="button"
@@ -412,14 +580,17 @@ export default function Home() {
                             setPdfMenuOpen(false);
                             downloadQuestionsPdf(result, "all_options");
                           }}
-                          className="w-full text-left p-2.5 hover:bg-[#fff9e6] flex flex-col cursor-pointer"
+                          className="w-full text-left p-2.5 hover:bg-slate-50 rounded-lg flex items-start gap-2.5 cursor-pointer transition-colors"
                         >
-                          <span className="font-bold text-black flex items-center gap-1.5">
-                            <span>📑</span> PDF: All Options &amp; Answers
-                          </span>
-                          <span className="text-[10px] text-gray-500 mt-0.5">
-                            Complete paper with all 4 options, chosen vs correct
-                          </span>
+                          <Layers className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-semibold text-slate-900 text-xs">
+                              Complete Question Paper
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              Full paper with all 4 options, candidate choices, and correct answer keys.
+                            </div>
+                          </div>
                         </button>
                       </div>
                     )}
@@ -427,284 +598,343 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-1 gap-x-4 text-gray-700">
-                <div>
-                  <span className="text-gray-500">Exam:</span>{" "}
-                  {result.candidate.examLevel}
+              {/* Candidate Info Chips */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                      Exam Date
+                    </span>
+                    <span className="font-medium text-slate-800">
+                      {result.candidate.testDate || "N/A"}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500">Date:</span>{" "}
-                  {result.candidate.testDate}
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                      Shift &amp; Time
+                    </span>
+                    <span className="font-medium text-slate-800">
+                      {result.candidate.shift || "N/A"}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500">Shift:</span>{" "}
-                  {result.candidate.shift}
-                </div>
-                <div className="sm:col-span-2 md:col-span-3">
-                  <span className="text-gray-500">Centre:</span>{" "}
-                  {result.candidate.centre}
+
+                <div className="sm:col-span-2 flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div className="truncate">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                      Test Centre
+                    </span>
+                    <span className="font-medium text-slate-800 truncate block">
+                      {result.candidate.centre || "N/A"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Grand Total Scoreboard */}
-            <div className="bg-white border border-[#e2e2d5] p-4 text-center">
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                Total Raw Marks (Calculated in Browser)
-              </div>
-              <div className="text-4xl font-extrabold font-mono text-black">
-                {result.summary.totalMarks.toFixed(2)}{" "}
-                <span className="text-base font-normal text-gray-500">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs text-center">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Total Raw Marks
+              </span>
+              <div className="mt-1 flex items-baseline justify-center gap-2">
+                <span className="text-4xl sm:text-5xl font-black text-slate-900 tabular-numbers">
+                  {result.summary.totalMarks.toFixed(2)}
+                </span>
+                <span className="text-lg font-medium text-slate-400">
                   / {result.summary.maxMarks}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 pt-3 border-t border-gray-200 text-xs font-mono">
-                <div className="p-1.5 bg-[#fbfbf8] border border-gray-200">
-                  <div className="text-gray-500">Attempted</div>
-                  <div className="font-bold text-sm text-black">
-                    {result.summary.attempted} / {result.summary.totalQuestions}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-100 text-xs">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-center">
+                  <div className="flex items-center justify-center gap-1 text-slate-500 text-xs mb-1">
+                    <FileCheck2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Attempted</span>
+                  </div>
+                  <div className="font-bold text-base text-slate-900 tabular-numbers">
+                    {result.summary.attempted}{" "}
+                    <span className="text-xs font-normal text-slate-500">
+                      / {result.summary.totalQuestions}
+                    </span>
                   </div>
                 </div>
-                <div className="p-1.5 bg-[#f0fff0] border border-green-200">
-                  <div className="text-green-700">Correct (+2)</div>
-                  <div className="font-bold text-sm text-green-800">
+
+                <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/70 text-center">
+                  <div className="flex items-center justify-center gap-1 text-emerald-700 text-xs mb-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Correct (+2)</span>
+                  </div>
+                  <div className="font-bold text-base text-emerald-800 tabular-numbers">
                     {result.summary.correct}
                   </div>
                 </div>
-                <div className="p-1.5 bg-[#fff0f0] border border-red-200">
-                  <div className="text-red-700">Wrong (-0.5)</div>
-                  <div className="font-bold text-sm text-red-800">
+
+                <div className="p-3 bg-rose-50/70 rounded-xl border border-rose-200/70 text-center">
+                  <div className="flex items-center justify-center gap-1 text-rose-700 text-xs mb-1">
+                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Wrong (-0.5)</span>
+                  </div>
+                  <div className="font-bold text-base text-rose-800 tabular-numbers">
                     {result.summary.wrong}
                   </div>
                 </div>
-                <div className="p-1.5 bg-[#f5f5f5] border border-gray-200">
-                  <div className="text-gray-600">Left (0)</div>
-                  <div className="font-bold text-sm text-gray-700">
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-center">
+                  <div className="flex items-center justify-center gap-1 text-slate-500 text-xs mb-1">
+                    <MinusCircle className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Left (0)</span>
+                  </div>
+                  <div className="font-bold text-base text-slate-700 tabular-numbers">
                     {result.summary.unattempted}
                   </div>
                 </div>
-                <div className="col-span-2 sm:col-span-1 p-1.5 bg-[#fdfaf0] border border-amber-200">
-                  <div className="text-amber-800">Accuracy</div>
-                  <div className="font-bold text-sm text-amber-900">
+
+                <div className="col-span-2 sm:col-span-1 p-3 bg-blue-50/70 rounded-xl border border-blue-200/70 text-center">
+                  <div className="flex items-center justify-center gap-1 text-blue-700 text-xs mb-1">
+                    <Target className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Accuracy</span>
+                  </div>
+                  <div className="font-bold text-base text-blue-800 tabular-numbers">
                     {result.summary.accuracy}%
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Section-Wise Breakdown Table */}
-            <div className="bg-white border border-[#e2e2d5] p-3 sm:p-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
-                Section-Wise Breakdown
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse font-mono">
-                  <thead>
-                    <tr className="bg-[#f0f0eb] border-b border-gray-300 text-gray-700">
-                      <th className="p-2 font-semibold">Section</th>
-                      <th className="p-2 font-semibold text-center">Attempted</th>
-                      <th className="p-2 font-semibold text-center text-green-700">Correct</th>
-                      <th className="p-2 font-semibold text-center text-red-700">Wrong</th>
-                      <th className="p-2 font-semibold text-center text-gray-600">Left</th>
-                      <th className="p-2 font-semibold text-right">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.sections?.map((sec) => (
-                      <tr
-                        key={sec.id}
-                        className="border-b border-gray-200 hover:bg-[#fafaf7]"
-                      >
-                        <td className="p-2">
-                          <span className="font-bold text-black font-sans">
+            {/* Section-Wise Breakdown with Visual Progress Bars */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                    Section-Wise Performance
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Detailed distribution across all 4 subjects
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-slate-500 hidden sm:flex">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Correct
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Wrong
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Left
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {result.sections?.map((sec) => {
+                  const total = sec.totalQuestions || 25;
+                  const correctPct = (sec.correct / total) * 100;
+                  const wrongPct = (sec.wrong / total) * 100;
+                  const unattemptedPct = (sec.unattempted / total) * 100;
+
+                  return (
+                    <div
+                      key={sec.id}
+                      className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                        <div>
+                          <span className="font-semibold text-slate-900 text-sm">
                             Part {sec.id}: {sec.name}
                           </span>
-                          <span className="block text-[10px] text-gray-500 font-mono">
-                            {sec.qRange}
+                          <span className="text-xs text-slate-400 ml-1.5">
+                            ({sec.qRange})
                           </span>
-                        </td>
-                        <td className="p-2 text-center">{sec.attempted}</td>
-                        <td className="p-2 text-center text-green-700 font-bold">
-                          {sec.correct}
-                        </td>
-                        <td className="p-2 text-center text-red-700 font-bold">
-                          {sec.wrong}
-                        </td>
-                        <td className="p-2 text-center text-gray-500">
-                          {sec.unattempted}
-                        </td>
-                        <td className="p-2 text-right font-bold text-sm text-black">
-                          {sec.sectionMarks.toFixed(2)}{" "}
-                          <span className="text-[10px] font-normal text-gray-400">
-                            / {sec.maxMarks}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-600">
+                            <span className="text-emerald-700 font-semibold">{sec.correct}</span> correct &middot;{" "}
+                            <span className="text-rose-700 font-semibold">{sec.wrong}</span> wrong &middot;{" "}
+                            <span className="text-slate-500">{sec.unattempted}</span> left
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <span className="font-bold text-sm text-slate-900 tabular-numbers">
+                            {sec.sectionMarks.toFixed(2)}{" "}
+                            <span className="text-xs font-normal text-slate-400">
+                              / {sec.maxMarks}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stacked Visual Bar */}
+                      <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden flex">
+                        <div
+                          style={{ width: `${correctPct}%` }}
+                          className="h-full bg-emerald-500"
+                          title={`Correct: ${sec.correct} (${correctPct.toFixed(0)}%)`}
+                        />
+                        <div
+                          style={{ width: `${wrongPct}%` }}
+                          className="h-full bg-rose-500"
+                          title={`Wrong: ${sec.wrong} (${wrongPct.toFixed(0)}%)`}
+                        />
+                        <div
+                          style={{ width: `${unattemptedPct}%` }}
+                          className="h-full bg-slate-300"
+                          title={`Unattempted: ${sec.unattempted} (${unattemptedPct.toFixed(0)}%)`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Question Review Section */}
             {result.questions && result.questions.length > 0 && (
-              <div className="bg-white border border-[#e2e2d5] p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-gray-200 gap-2">
-                  <div className="flex items-center space-x-2">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-gray-700">
-                      Question Review
-                    </h2>
-                    <span className="text-xs text-gray-400 font-mono">
-                      ({filteredQuestions?.length} shown)
-                    </span>
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                      Question Paper Review
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Showing {filteredQuestions?.length} of {result.summary.totalQuestions} questions
+                    </p>
                   </div>
 
-                  {/* Filters & View Toggle */}
+                  {/* Filter Pills and View Modes */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <div className="inline-flex border border-gray-300">
+                    {/* Status Filters */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl">
                       <button
                         onClick={() => setFilter("all")}
-                        className={`px-2 py-1 font-mono cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-colors ${
                           filter === "all"
-                            ? "bg-[#ff6600] text-black font-bold"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-white text-slate-900 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
                         All ({result.summary.totalQuestions})
                       </button>
                       <button
                         onClick={() => setFilter("wrong")}
-                        className={`px-2 py-1 font-mono cursor-pointer border-l border-gray-300 ${
+                        className={`px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-colors ${
                           filter === "wrong"
-                            ? "bg-[#ff6600] text-black font-bold"
-                            : "bg-white text-red-700 hover:bg-red-50"
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : "text-rose-700 hover:text-rose-900"
                         }`}
                       >
                         Wrong ({result.summary.wrong})
                       </button>
                       <button
                         onClick={() => setFilter("unattempted")}
-                        className={`px-2 py-1 font-mono cursor-pointer border-l border-gray-300 ${
+                        className={`px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-colors ${
                           filter === "unattempted"
-                            ? "bg-[#ff6600] text-black font-bold"
-                            : "bg-white text-gray-600 hover:bg-gray-100"
+                            ? "bg-white text-slate-900 shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
                         Left ({result.summary.unattempted})
                       </button>
                       <button
                         onClick={() => setFilter("correct")}
-                        className={`px-2 py-1 font-mono cursor-pointer border-l border-gray-300 ${
+                        className={`px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-colors ${
                           filter === "correct"
-                            ? "bg-[#ff6600] text-black font-bold"
-                            : "bg-white text-green-700 hover:bg-green-50"
+                            ? "bg-emerald-600 text-white shadow-xs"
+                            : "text-emerald-700 hover:text-emerald-900"
                         }`}
                       >
                         Correct ({result.summary.correct})
                       </button>
                     </div>
 
-                    <div className="inline-flex border border-gray-300">
+                    {/* View Switcher */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl">
                       <button
                         onClick={() => setViewMode("cards")}
-                        className={`px-2 py-1 font-mono cursor-pointer ${
+                        className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
                           viewMode === "cards"
-                            ? "bg-black text-white font-bold"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-white text-slate-900 shadow-xs"
+                            : "text-slate-500 hover:text-slate-900"
                         }`}
+                        title="Detailed Cards View"
                       >
-                        Cards
+                        <LayoutGrid className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setViewMode("table")}
-                        className={`px-2 py-1 font-mono cursor-pointer border-l border-gray-300 ${
+                        className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
                           viewMode === "table"
-                            ? "bg-black text-white font-bold"
-                            : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-white text-slate-900 shadow-xs"
+                            : "text-slate-500 hover:text-slate-900"
                         }`}
+                        title="Compact Table View"
                       >
-                        Compact
-                      </button>
-                    </div>
-
-                    {/* Direct PDF Export Buttons */}
-                    <div className="inline-flex border border-gray-300 font-mono">
-                      <button
-                        type="button"
-                        onClick={() => downloadQuestionsPdf(result, "correct_only")}
-                        title="Download PDF showing only the correct answers for each question"
-                        className="bg-white hover:bg-[#fff9e6] text-black px-2 py-1 cursor-pointer flex items-center gap-1 text-[11px]"
-                      >
-                        <span>📄</span>
-                        <span className="hidden md:inline">PDF: Answers Only</span>
-                        <span className="md:hidden">Answers PDF</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => downloadQuestionsPdf(result, "all_options")}
-                        title="Download PDF showing all 4 options with correct answers highlighted"
-                        className="bg-white hover:bg-[#fff9e6] text-black px-2 py-1 border-l border-gray-300 cursor-pointer flex items-center gap-1 text-[11px]"
-                      >
-                        <span>📑</span>
-                        <span className="hidden md:inline">PDF: Full Paper</span>
-                        <span className="md:hidden">Full PDF</span>
+                        <List className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Cards View */}
+                {/* Detailed Cards View */}
                 {viewMode === "cards" && (
                   <div className="space-y-4">
                     {filteredQuestions?.map((q) => {
-                      const statusBorder =
-                        q.status === "correct"
-                          ? "border-l-4 border-l-green-500"
-                          : q.status === "wrong"
-                          ? "border-l-4 border-l-red-500"
-                          : "border-l-4 border-l-gray-400";
+                      let badge = null;
+                      let cardBorder = "border-slate-200";
+
+                      if (q.status === "correct") {
+                        cardBorder = "border-emerald-200 bg-white";
+                        badge = (
+                          <span className="bg-emerald-50 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Correct (+2.00)</span>
+                          </span>
+                        );
+                      } else if (q.status === "wrong") {
+                        cardBorder = "border-rose-200 bg-white";
+                        badge = (
+                          <span className="bg-rose-50 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-rose-200 flex items-center gap-1">
+                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Wrong (-0.50)</span>
+                          </span>
+                        );
+                      } else {
+                        badge = (
+                          <span className="bg-slate-100 text-slate-600 text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+                            <MinusCircle className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Left (0.00)</span>
+                          </span>
+                        );
+                      }
 
                       return (
                         <div
                           key={q.qNum}
-                          className={`border border-gray-200 p-3 bg-[#fafaf7] ${statusBorder}`}
+                          className={`rounded-xl border ${cardBorder} p-4 sm:p-5 shadow-xs`}
                         >
-                          <div className="flex items-center justify-between text-xs mb-2 pb-1.5 border-b border-gray-200">
-                            <div>
-                              <span className="font-bold font-mono">
-                                Q.{q.qNum}
-                              </span>{" "}
-                              <span className="text-gray-500 text-[11px]">
-                                ({q.sectionName})
+                          <div className="flex items-center justify-between text-xs mb-3 pb-2.5 border-b border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">
+                                Question {q.qNum}
+                              </span>
+                              <span className="text-slate-400 text-xs">
+                                &middot; {q.sectionName}
                               </span>
                             </div>
-                            <div>
-                              {q.status === "correct" && (
-                                <span className="bg-green-100 text-green-800 text-[10px] font-mono font-bold px-1.5 py-0.5 border border-green-300">
-                                  ✓ CORRECT (+2.00)
-                                </span>
-                              )}
-                              {q.status === "wrong" && (
-                                <span className="bg-red-100 text-red-800 text-[10px] font-mono font-bold px-1.5 py-0.5 border border-red-300">
-                                  ✗ WRONG (-0.50)
-                                </span>
-                              )}
-                              {q.status === "unattempted" && (
-                                <span className="bg-gray-200 text-gray-700 text-[10px] font-mono px-1.5 py-0.5 border border-gray-300">
-                                  — UNATTEMPTED (0.00)
-                                </span>
-                              )}
-                            </div>
+                            <div>{badge}</div>
                           </div>
 
                           {/* Question Image */}
                           {q.questionImgUrl && (
-                            <div className="mb-3 p-1 bg-white border border-gray-200 overflow-x-auto">
+                            <div className="mb-4 p-2 bg-slate-50/60 border border-slate-100 rounded-lg overflow-x-auto">
                               <img
                                 src={q.questionImgUrl}
                                 alt={`Question ${q.qNum}`}
-                                className="max-h-64 object-contain"
+                                className="max-h-64 object-contain rounded"
                                 loading="lazy"
                               />
                             </div>
@@ -712,51 +942,50 @@ export default function Home() {
 
                           {/* 4 Options Grid */}
                           {q.options && q.options.length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
                               {q.options.map((opt) => {
-                                let badgeClass =
-                                  "border-gray-200 bg-white text-gray-800";
+                                let badgeClass = "border-slate-200 bg-slate-50/50 text-slate-700";
                                 if (opt.isCorrect && opt.isChosen) {
                                   badgeClass =
-                                    "border-green-500 bg-green-50 ring-1 ring-green-500 text-green-900";
+                                    "border-emerald-400 bg-emerald-50/80 ring-1 ring-emerald-400 text-emerald-950";
                                 } else if (opt.isCorrect) {
                                   badgeClass =
-                                    "border-amber-400 bg-amber-50/60 ring-1 ring-amber-400 text-amber-900";
+                                    "border-emerald-300 bg-emerald-50/50 text-emerald-900";
                                 } else if (opt.isChosen) {
                                   badgeClass =
-                                    "border-red-400 bg-red-50 ring-1 ring-red-400 text-red-900";
+                                    "border-rose-300 bg-rose-50/60 text-rose-900";
                                 }
 
                                 return (
                                   <div
                                     key={opt.optionNumber}
-                                    className={`p-2 border text-xs flex flex-col justify-between ${badgeClass}`}
+                                    className={`p-3 rounded-lg border text-xs flex flex-col justify-between transition-colors ${badgeClass}`}
                                   >
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="font-bold font-mono text-[11px]">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="font-semibold text-slate-900">
                                         Option {opt.optionNumber}
                                       </span>
-                                      <div className="flex gap-1 text-[10px] font-mono font-bold">
+                                      <div className="flex gap-1 text-[11px] font-semibold">
                                         {opt.isChosen && (
                                           <span
                                             className={
                                               opt.isCorrect
-                                                ? "text-green-700"
-                                                : "text-red-700"
+                                                ? "text-emerald-700 font-bold"
+                                                : "text-rose-700 font-bold"
                                             }
                                           >
-                                            [You chose]
+                                            [Your Answer]
                                           </span>
                                         )}
                                         {opt.isCorrect && (
-                                          <span className="text-emerald-700">
-                                            [Correct Ans]
+                                          <span className="text-emerald-700 font-bold">
+                                            [Correct Answer]
                                           </span>
                                         )}
                                       </div>
                                     </div>
                                     {opt.imgUrl && (
-                                      <div className="bg-white p-1 border border-gray-100 overflow-x-auto">
+                                      <div className="bg-white p-1.5 border border-slate-200/60 rounded overflow-x-auto">
                                         <img
                                           src={opt.imgUrl}
                                           alt={`Option ${opt.optionNumber}`}
@@ -778,48 +1007,50 @@ export default function Home() {
 
                 {/* Compact Table View */}
                 {viewMode === "table" && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left border-collapse font-mono">
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-xs text-left border-collapse">
                       <thead>
-                        <tr className="bg-[#f0f0eb] border-b border-gray-300 text-gray-700">
-                          <th className="p-1.5">Q.#</th>
-                          <th className="p-1.5">Section</th>
-                          <th className="p-1.5 text-center">Status</th>
-                          <th className="p-1.5 text-center">Chosen</th>
-                          <th className="p-1.5 text-center">Correct</th>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                          <th className="p-3 font-semibold">Q. No</th>
+                          <th className="p-3 font-semibold">Section</th>
+                          <th className="p-3 font-semibold text-center">Status</th>
+                          <th className="p-3 font-semibold text-center">Your Choice</th>
+                          <th className="p-3 font-semibold text-center">Correct Key</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-slate-100">
                         {filteredQuestions?.map((q) => (
                           <tr
                             key={q.qNum}
-                            className="border-b border-gray-200 hover:bg-[#fafaf7]"
+                            className="hover:bg-slate-50/80 transition-colors"
                           >
-                            <td className="p-1.5 font-bold">Q.{q.qNum}</td>
-                            <td className="p-1.5 text-gray-600">
-                              Part {q.sectionId}
+                            <td className="p-3 font-bold text-slate-900">
+                              Question {q.qNum}
                             </td>
-                            <td className="p-1.5 text-center font-bold">
+                            <td className="p-3 text-slate-600">
+                              Part {q.sectionId}: {q.sectionName}
+                            </td>
+                            <td className="p-3 text-center">
                               {q.status === "correct" && (
-                                <span className="text-green-700">
-                                  ✓ Correct
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3" /> Correct (+2)
                                 </span>
                               )}
                               {q.status === "wrong" && (
-                                <span className="text-red-700">
-                                  ✗ Wrong
+                                <span className="inline-flex items-center gap-1 text-rose-700 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                                  <XCircle className="w-3 h-3" /> Wrong (-0.5)
                                 </span>
                               )}
                               {q.status === "unattempted" && (
-                                <span className="text-gray-500">
-                                  — Left
+                                <span className="inline-flex items-center gap-1 text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-md">
+                                  <MinusCircle className="w-3 h-3 text-slate-400" /> Left (0)
                                 </span>
                               )}
                             </td>
-                            <td className="p-1.5 text-center">
+                            <td className="p-3 text-center font-medium text-slate-700">
                               {q.chosenOption ? `Option ${q.chosenOption}` : "—"}
                             </td>
-                            <td className="p-1.5 text-center font-bold text-gray-800">
+                            <td className="p-3 text-center font-bold text-emerald-700">
                               {q.correctOption ? `Option ${q.correctOption}` : "—"}
                             </td>
                           </tr>
@@ -834,32 +1065,28 @@ export default function Home() {
         )}
       </main>
 
-      {/* Classic Hacker News Minimal Footer */}
-      <footer className="border-t border-[#d85800] bg-[#f6f6ef] py-3 text-center text-xs text-gray-600 space-y-1">
-        <div className="flex justify-center space-x-2 text-gray-500">
-          <a
-            href="https://github.com/blackpirateapps/ssc-answer-key-parser"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline"
-          >
-            GitHub
-          </a>
-          <span>|</span>
-          <a
-            href="https://news.ycombinator.com"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline"
-          >
-            Hacker News Style
-          </a>
-          <span>|</span>
-          <span>Fast Vercel Serverless Parser</span>
+      {/* Modern Clean Footer */}
+      <footer className="border-t border-slate-200 bg-white py-6 mt-8">
+        <div className="max-w-5xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+          <div className="flex justify-center items-center space-x-3 text-slate-600">
+            <a
+              href="https://github.com/blackpirateapps/ssc-answer-key-parser"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-slate-900 flex items-center gap-1 transition-colors"
+            >
+              <GithubIcon className="w-3.5 h-3.5" />
+              <span>GitHub Repository</span>
+            </a>
+            <span>&middot;</span>
+            <span>Serverless Vercel Architecture</span>
+            <span>&middot;</span>
+            <span>Accurate Raw Marks</span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Not officially affiliated with Staff Selection Commission. Evaluated directly from cbexams candidate response sheets.
+          </p>
         </div>
-        <p className="text-[11px] text-gray-500">
-          Not officially affiliated with Staff Selection Commission. Data parsed directly from cbexams response sheet.
-        </p>
       </footer>
     </div>
   );

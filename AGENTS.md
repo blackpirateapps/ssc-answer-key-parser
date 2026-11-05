@@ -23,7 +23,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ---
 
 ## 1. Project Purpose
-This repository provides a lightweight, ultra-fast, Hacker News-themed web application to parse SSC CGL response sheet URLs (hosted on `sscexams.cbexams.com`), calculate raw scores (+2 for correct, -0.5 for wrong), and persist submissions into Neon Serverless PostgreSQL. It is engineered to absorb extreme traffic spikes (10k–100k concurrent requests) via an immediate-save URL intake queue and controlled sequential scraping.
+This repository provides a lightweight, ultra-fast, student-friendly web application to parse SSC CGL response sheet URLs (hosted on `sscexams.cbexams.com`), calculate raw scores (+2 for correct, -0.5 for wrong), and persist submissions into Neon Serverless PostgreSQL. It is engineered to absorb extreme traffic spikes (10k–100k concurrent requests) via an immediate-save URL intake queue and controlled sequential scraping. It features a polished, accessible design (Neutral Slate / Minimalist Monochrome with Blue accents) built with modern sans-serif typography, Lucide vector icons, interactive visual progress bars, and zero monospace terminal aesthetics.
 
 ---
 
@@ -37,9 +37,9 @@ src/
 │   │   │   └── route.ts       # Serverless URL intake & polling endpoint with Neon + Cache
 │   │   └── worker/
 │   │       └── route.ts       # Cron/queue drain endpoint (drains pending jobs one by one)
-│   ├── globals.css            # Tailwind v4 configuration + HN beige/orange theme vars
+│   ├── globals.css            # Tailwind v4 configuration + Neutral Slate & Blue theme vars
 │   ├── layout.tsx             # Root layout with metadata and font setup
-│   └── page.tsx               # Client UI component (Hacker News aesthetic, polling, browser score calc)
+│   └── page.tsx               # Client UI component (Slate & Blue aesthetic, polling, browser score calc)
 ├── lib/
 │   ├── cache.ts               # In-memory LRU + Single-Flight deduplication + Upstash Redis
 │   ├── db/
