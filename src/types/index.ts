@@ -75,6 +75,8 @@ export interface ScoreCardResponse {
   queuePosition?: number;
   message?: string;
   cached?: boolean;
+  alreadySavedByRollNo?: boolean;
+  duplicateNotice?: string;
   fetchedAt?: string;
   candidate?: CandidateInfo;
   summary?: OverallSummary;

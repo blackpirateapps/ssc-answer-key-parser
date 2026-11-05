@@ -78,6 +78,9 @@ AGENTS.md                      # Instructions, architectural patterns, and scrap
    - `report_cards` stores pure counts (`correct_count`, `wrong_count`, `unattempted_count`).
 5. **Marks Calculation in Browser:**
    - The database stores raw counts. Marks calculation (+2.00 correct, -0.50 wrong, net scores, accuracy) executes inside the browser via `src/lib/scoring.ts`.
+6. **Two-Tier Duplication Detection:**
+   - **Tier 1 (URL Check):** First checks if URL/EncKey is already completed in cache/DB. If new, enqueues the URL.
+   - **Tier 2 (Roll Number Check):** Once scraped, checks candidate `roll_no` against existing completed submissions for that exam. If already present, marks `alreadySavedByRollNo = true` and informs the candidate: *"This roll number is already saved, showing saved results."*
 
 ---
 

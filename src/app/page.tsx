@@ -328,16 +328,37 @@ export default function Home() {
         {/* Result Score Card */}
         {result && result.candidate && result.summary && (
           <div className="space-y-4">
+            {/* Roll Number Duplication Notice */}
+            {result.alreadySavedByRollNo && (
+              <div className="bg-[#e8f4fd] border border-[#b6d4fe] p-3 text-xs font-mono text-[#084298] flex items-center justify-between shadow-xs">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-sm">ℹ️</span>
+                  <span>
+                    {result.duplicateNotice ||
+                      `This roll number (${result.candidate.rollNo}) is already saved, showing saved results.`}
+                  </span>
+                </div>
+                <span className="bg-[#cfe2ff] text-[#084298] text-[10px] px-2 py-0.5 border border-[#b6d4fe] font-bold">
+                  DUPLICATE ROLL NO
+                </span>
+              </div>
+            )}
+
             {/* Candidate & Metadata Header */}
             <div className="bg-white border border-[#e2e2d5] p-3 text-xs">
               <div className="flex flex-wrap items-center justify-between border-b border-gray-200 pb-2 mb-2 gap-2">
-                <div>
+                <div className="flex items-center flex-wrap gap-1">
                   <span className="font-bold text-sm text-black">
                     {result.candidate.name}
-                  </span>{" "}
+                  </span>
                   <span className="text-gray-500">
                     (Roll: {result.candidate.rollNo})
                   </span>
+                  {result.alreadySavedByRollNo && (
+                    <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-1.5 py-0.5 border border-blue-300 ml-1">
+                      Already Saved
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="bg-[#f0f0eb] text-gray-700 text-[10px] font-mono px-1.5 py-0.5 border border-gray-300">

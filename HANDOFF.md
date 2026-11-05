@@ -28,6 +28,7 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
 | **Concurrency Limiter** | ✅ Complete | PostgreSQL `FOR UPDATE SKIP LOCKED` throttles scraping to 2 concurrent workers. |
 | **Self-Driving Queue Polling** | ✅ Complete | Frontend automatically polls queue position and displays retro HN queue status banner. |
 | **Worker Drain Endpoint** | ✅ Complete | `/api/worker` endpoint ready for Vercel Cron or background queue draining. |
+| **Roll Number Deduplication** | ✅ Complete | Detects duplicate roll numbers across different URLs and displays "This roll number is already saved, showing saved results." |
 | **High-Concurrency Caching** | ✅ Complete | In-memory LRU + Single-Flight deduplication + Pluggable Upstash Redis. |
 | **Hacker News UI** | ✅ Complete | Beige `#f6f6ef` & orange `#ff6600` theme; filterable question cards + compact table view. |
 | **Production Build** | ✅ Verified | Passes `npm run build` and `npx tsc --noEmit` cleanly. Tested on live sample. |
@@ -73,6 +74,19 @@ It is engineered to absorb **10,000 to 100,000 concurrent user traffic spikes** 
   - Negative marks (`wrong * 0.5`)
   - Net section marks (`positive - negative`)
   - Overall accuracy and total score.
+
+### D. Two-Tier Duplication Detection
+1. **Tier 1 (URL / EncKey Level):**
+   - The user inputs their cbexams URL.
+   - The server first checks if this `enc_key` is already saved and completed in cache/Postgres. If yes, it returns the saved scorecard immediately (0ms scrape).
+   - If not yet in the database, the URL is saved first into `submissions` with `status = 'pending'`.
+2. **Tier 2 (Candidate Roll Number Level):**
+   - Once the background worker fetches the page from cbexams and extracts the candidate's `roll_no` and `exam_id`:
+   - It checks: `SELECT id FROM submissions WHERE roll_no = $1 AND exam_id = $2 AND status = 'completed' AND id != $3`.
+   - If a completed submission for that roll number already exists, it flags `alreadySavedByRollNo: true`.
+   - The frontend renders an informative alert:
+     `"This roll number is already saved, showing saved results."`
+   - Prevents duplicate evaluations even if a candidate generates or pastes an alternate link.
 
 ---
 

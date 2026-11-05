@@ -259,21 +259,28 @@ export async function claimNextSubmission(
   return null;
 }
 
+export interface SaveCompletedResult {
+  alreadySavedByRollNo: boolean;
+  existingSubmissionId?: number;
+  existingEncKey?: string;
+}
+
 /**
  * Saves completed submission data:
  * 1. Upserts & deduplicates examination title -> returns exam_id
  * 2. Upserts & deduplicates exam shift date & time -> returns shift_id
- * 3. Updates submission master record with candidate info & raw questions
- * 4. Inserts subjectwise report_cards (correct, wrong, unattempted)
+ * 3. Checks if roll number was already saved in another completed submission
+ * 4. Updates submission master record with candidate info & raw questions
+ * 5. Inserts subjectwise report_cards (correct, wrong, unattempted)
  */
 export async function saveCompletedSubmission(params: {
   submissionId: number;
   candidate: CandidateInfo;
   sections: SectionSummary[];
   questions?: QuestionDetail[];
-}): Promise<void> {
+}): Promise<SaveCompletedResult> {
   const sql = getDb();
-  if (!sql) return;
+  if (!sql) return { alreadySavedByRollNo: false };
 
   const { submissionId, candidate, sections, questions } = params;
 
@@ -300,6 +307,30 @@ export async function saveCompletedSubmission(params: {
     RETURNING id;
   `;
   const shiftId = shiftRows[0]?.id;
+
+  // 2.5 Duplicate Roll Number Detector:
+  // Check if this roll number already exists for this examination in an earlier completed submission
+  let alreadySavedByRollNo = false;
+  let existingEncKey: string | undefined;
+  let existingSubmissionId: number | undefined;
+
+  if (candidate.rollNo && candidate.rollNo !== "N/A" && examId) {
+    const existingRoll = await sql`
+      SELECT id, enc_key
+      FROM submissions
+      WHERE roll_no = ${candidate.rollNo}
+        AND exam_id = ${examId}
+        AND status = 'completed'
+        AND id != ${submissionId}
+      ORDER BY created_at ASC
+      LIMIT 1;
+    `;
+    if (existingRoll.length > 0) {
+      alreadySavedByRollNo = true;
+      existingSubmissionId = existingRoll[0].id;
+      existingEncKey = existingRoll[0].enc_key;
+    }
+  }
 
   // 3. Update master submission record
   const rawQuestionsJson = questions ? JSON.stringify(questions) : null;
@@ -347,6 +378,12 @@ export async function saveCompletedSubmission(params: {
             unattempted_count = EXCLUDED.unattempted_count;
     `;
   }
+
+  return {
+    alreadySavedByRollNo,
+    existingSubmissionId,
+    existingEncKey,
+  };
 }
 
 /**
@@ -458,6 +495,24 @@ export async function getSubmissionRecord(
   // Browser score calculator reconstructs section marks & overall summary
   const { sections, summary } = calculateClientScores(rawSections);
 
+  // Duplicate roll number detector for read requests
+  let alreadySavedByRollNo = false;
+  if (sub.roll_no && sub.roll_no !== "N/A" && sub.exam_name) {
+    const prior = await sql`
+      SELECT s2.id
+      FROM submissions s2
+      LEFT JOIN examinations e ON s2.exam_id = e.id
+      WHERE s2.roll_no = ${sub.roll_no}
+        AND e.name = ${sub.exam_name}
+        AND s2.status = 'completed'
+        AND s2.id < ${sub.id}
+      LIMIT 1;
+    `;
+    if (prior.length > 0) {
+      alreadySavedByRollNo = true;
+    }
+  }
+
   const candidate: CandidateInfo = {
     rollNo: sub.roll_no || "N/A",
     name: sub.candidate_name || "N/A",
@@ -472,6 +527,10 @@ export async function getSubmissionRecord(
     status: "completed",
     submissionId: sub.id,
     encKey: sub.enc_key,
+    alreadySavedByRollNo,
+    duplicateNotice: alreadySavedByRollNo
+      ? "This roll number is already saved, showing saved results."
+      : undefined,
     candidate,
     rawSections,
     sections,

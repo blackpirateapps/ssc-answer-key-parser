@@ -33,23 +33,29 @@ export async function processSubmission(
         );
       }
 
-      // 2. Persist to Postgres (deduplicated exam & shift, subjectwise counts)
-      await saveCompletedSubmission({
+      // 2. Persist to Postgres (deduplicated exam & shift, subjectwise counts, roll number check)
+      const saveResult = await saveCompletedSubmission({
         submissionId,
         candidate: parsed.candidate,
         sections: parsed.sections,
         questions: parsed.questions,
       });
 
-      // 3. Cache the completed response
-      await setInCache(cacheKey, parsed);
-
-      return {
+      const responseWithMeta: ScoreCardResponse = {
         ...parsed,
         status: "completed",
         submissionId,
         encKey,
+        alreadySavedByRollNo: saveResult?.alreadySavedByRollNo,
+        duplicateNotice: saveResult?.alreadySavedByRollNo
+          ? "This roll number is already saved, showing saved results."
+          : undefined,
       };
+
+      // 3. Cache the completed response
+      await setInCache(cacheKey, responseWithMeta);
+
+      return responseWithMeta;
     } catch (err: any) {
       console.error(`Worker error on submission ${submissionId}:`, err);
       await markSubmissionFailed(
